@@ -19,6 +19,7 @@ namespace WeChatPlus.Shell
         private readonly ComponentRepository _componentRepository;
         private readonly LicenseApiClient _licenseApiClient;
         private readonly DiagnosticsLogService _diagnosticsLog;
+        private readonly PrivacyLockService _privacyLockService;
         private readonly string _helperPath;
 
         private ListBox _accountList;
@@ -27,6 +28,7 @@ namespace WeChatPlus.Shell
         private TextBox _searchBox;
         private Label _helperStatus;
         private Label _workspaceStatus;
+        private Label _privacyLockOverlay;
         private Label _processStatus;
         private CheckBox _hideForScreenshot;
         private TableLayoutPanel _mainLayout;
@@ -44,6 +46,7 @@ namespace WeChatPlus.Shell
             _componentRepository = new ComponentRepository(_dataRoot);
             _licenseApiClient = new LicenseApiClient("https://license.example.invalid/api");
             _diagnosticsLog = new DiagnosticsLogService(_dataRoot);
+            _privacyLockService = new PrivacyLockService(_dataRoot);
             _helperPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WeChatPlus.OpenHelper.exe");
 
             InitializeComponent();
@@ -150,7 +153,7 @@ namespace WeChatPlus.Shell
             rail.Controls.Add(addButton);
 
             Button lockButton = RailButton("锁", "隐私锁", 92);
-            lockButton.Click += delegate { _workspaceStatus.Text = "隐私锁已启用：会话区域已隐藏。"; };
+            lockButton.Click += PrivacyLockClicked;
             rail.Controls.Add(lockButton);
 
             Button splitButton = RailButton("拆", "拆分窗口", 166);
@@ -223,6 +226,17 @@ namespace WeChatPlus.Shell
             _workspaceStatus.Dock = DockStyle.Fill;
             canvas.Controls.Add(_workspaceStatus);
 
+            _privacyLockOverlay = new Label();
+            _privacyLockOverlay.Text = "隐私锁已启用" + Environment.NewLine + "会话区域已隐藏，点击左侧隐私锁输入 PIN 解锁。";
+            _privacyLockOverlay.ForeColor = Color.FromArgb(70, 76, 84);
+            _privacyLockOverlay.BackColor = Color.FromArgb(236, 239, 243);
+            _privacyLockOverlay.AutoSize = false;
+            _privacyLockOverlay.TextAlign = ContentAlignment.MiddleCenter;
+            _privacyLockOverlay.Dock = DockStyle.Fill;
+            _privacyLockOverlay.Visible = false;
+            canvas.Controls.Add(_privacyLockOverlay);
+            _privacyLockOverlay.BringToFront();
+
             Panel bottom = new Panel();
             bottom.Dock = DockStyle.Bottom;
             bottom.Height = 50;
@@ -264,6 +278,7 @@ namespace WeChatPlus.Shell
             _hideForScreenshot.Location = new Point(136, 15);
             bottom.Controls.Add(_hideForScreenshot);
 
+            ApplyPrivacyLockVisualState();
             return workspace;
         }
 
@@ -438,6 +453,60 @@ namespace WeChatPlus.Shell
                 LogDiagnostic("helper.start", "Start WeChat failed.", ex);
                 MessageBox.Show("启动微信失败：" + ex.Message, "添加账号");
             }
+        }
+
+        private void PrivacyLockClicked(object sender, EventArgs e)
+        {
+            PrivacyLockState state = _privacyLockService.GetOrCreate();
+            if (state.IsLocked)
+            {
+                using (Form dialog = new Form())
+                {
+                    dialog.Text = "解除隐私锁";
+                    dialog.Size = new Size(360, 160);
+                    dialog.StartPosition = FormStartPosition.CenterParent;
+
+                    Label prompt = new Label();
+                    prompt.Text = "请输入隐私锁 PIN";
+                    prompt.Location = new Point(16, 18);
+                    prompt.Size = new Size(300, 20);
+                    dialog.Controls.Add(prompt);
+
+                    TextBox pin = new TextBox();
+                    pin.Location = new Point(16, 48);
+                    pin.Size = new Size(300, 23);
+                    pin.PasswordChar = '*';
+                    dialog.Controls.Add(pin);
+
+                    Button unlock = new Button();
+                    unlock.Text = "解锁";
+                    unlock.Location = new Point(226, 82);
+                    unlock.DialogResult = DialogResult.OK;
+                    dialog.Controls.Add(unlock);
+                    dialog.AcceptButton = unlock;
+
+                    if (dialog.ShowDialog(this) != DialogResult.OK)
+                    {
+                        return;
+                    }
+
+                    if (!_privacyLockService.TryUnlock(pin.Text))
+                    {
+                        _workspaceStatus.Text = "隐私锁 PIN 错误，会话区域仍隐藏。";
+                        MessageBox.Show("PIN 错误。默认初始 PIN 为 1234，请在正式授权系统接入后修改为用户自定义凭据。", "隐私锁");
+                        ApplyPrivacyLockVisualState();
+                        return;
+                    }
+
+                    _workspaceStatus.Text = "隐私锁已解除。";
+                    ApplyPrivacyLockVisualState();
+                    return;
+                }
+            }
+
+            _privacyLockService.Lock();
+            _workspaceStatus.Text = "隐私锁已启用：会话区域已隐藏。";
+            ApplyPrivacyLockVisualState();
         }
 
         private void ReplyDoubleClicked(object sender, EventArgs e)
@@ -1113,6 +1182,33 @@ namespace WeChatPlus.Shell
             }
             catch
             {
+            }
+        }
+
+        private void ApplyPrivacyLockVisualState()
+        {
+            if (_privacyLockOverlay == null)
+            {
+                return;
+            }
+
+            bool locked = _privacyLockService.GetOrCreate().IsLocked;
+            _privacyLockOverlay.Visible = locked;
+            if (_processStatus != null)
+            {
+                _processStatus.Visible = !locked;
+            }
+            if (_workspaceStatus != null)
+            {
+                _workspaceStatus.Visible = !locked;
+            }
+            if (locked)
+            {
+                _privacyLockOverlay.BringToFront();
+            }
+            else
+            {
+                _workspaceStatus.BringToFront();
             }
         }
 

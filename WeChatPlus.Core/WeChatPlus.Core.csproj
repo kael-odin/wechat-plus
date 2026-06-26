@@ -47,6 +47,7 @@
     <Compile Include="Models\AccountRecord.cs" />
     <Compile Include="Models\LicenseState.cs" />
     <Compile Include="Models\OpenSourceComponent.cs" />
+    <Compile Include="Models\PrivacyLockState.cs" />
     <Compile Include="Models\QuickReply.cs" />
     <Compile Include="Models\ReleasePackageFile.cs" />
     <Compile Include="Models\ReleasePackageManifest.cs" />
@@ -61,6 +62,7 @@
     <Compile Include="Services\LicenseActivationRequest.cs" />
     <Compile Include="Services\LicenseApiClient.cs" />
     <Compile Include="Services\LicenseFeaturePolicy.cs" />
+    <Compile Include="Services\PrivacyLockService.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
     <Compile Include="Services\TrialLicenseService.cs" />
     <Compile Include="Services\UpdateCheckService.cs" />

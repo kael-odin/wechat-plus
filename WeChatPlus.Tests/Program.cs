@@ -33,6 +33,7 @@ namespace WeChatPlus.Tests
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
                 Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
+                Run("persists privacy lock state", PersistsPrivacyLockState);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
                 Run("enforces trial feature limits", EnforcesTrialFeatureLimits);
@@ -395,6 +396,22 @@ namespace WeChatPlus.Tests
             AssertContains(log, "InvalidOperationException", "diagnostics exception type");
             AssertContains(log, "missing helper", "diagnostics exception message");
             AssertEqual(log, exported, "exported diagnostics content");
+        }
+
+        private static void PersistsPrivacyLockState()
+        {
+            string root = CreateTempRoot();
+            PrivacyLockService service = new PrivacyLockService(root);
+
+            PrivacyLockState initial = service.GetOrCreate();
+            AssertTrue(!initial.IsLocked, "privacy lock initially unlocked");
+
+            PrivacyLockState locked = service.Lock();
+            AssertTrue(locked.IsLocked, "privacy lock locked");
+            AssertTrue(!service.TryUnlock("bad-pin"), "bad pin stays locked");
+            AssertTrue(service.GetOrCreate().IsLocked, "bad pin persisted locked");
+            AssertTrue(service.TryUnlock(PrivacyLockService.DefaultPin), "default pin unlocks");
+            AssertTrue(!service.GetOrCreate().IsLocked, "unlock persisted");
         }
 
         private static void UpdatesQuickRepliesById()
