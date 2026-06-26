@@ -12,6 +12,10 @@ namespace WeChatPlus.Core.Models
 
         public bool PreservedUserData { get; set; }
 
+        public bool RemovedRegistry { get; set; }
+
+        public string RegistryMode { get; set; }
+
         public string[] Errors { get; set; }
 
         public string SummaryText { get; set; }

@@ -16,6 +16,10 @@ namespace WeChatPlus.Core.Models
 
         public string RegistrationPath { get; set; }
 
+        public bool WroteRegistry { get; set; }
+
+        public string RegistryMode { get; set; }
+
         public string[] Errors { get; set; }
 
         public string SummaryText { get; set; }

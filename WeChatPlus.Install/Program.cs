@@ -19,6 +19,7 @@ namespace WeChatPlus.Install
                 string installRoot = GetOption(options, "install-root", manifest.DefaultInstallDirectory);
                 string startMenuRoot = GetOption(options, "start-menu-root", manifest.StartMenuFolder);
                 bool planOnly = HasFlag(args, "--plan");
+                bool writeRegistry = HasFlag(args, "--write-registry");
 
                 InstallPlan plan = InstallPlanner.Create(manifest, packageRoot, installRoot, startMenuRoot);
                 output = HelperCommandResult.Success(planOnly ? "install plan" : "install execute");
@@ -29,10 +30,11 @@ namespace WeChatPlus.Install
                 output.Data["fileCount"] = plan.FileCopies.Length;
                 output.Data["uninstallCommand"] = plan.UninstallCommand;
                 output.Data["registryKey"] = plan.RegistryKey;
+                output.Data["writeRegistry"] = writeRegistry;
 
                 if (!planOnly)
                 {
-                    InstallResult result = InstallService.Execute(plan);
+                    InstallResult result = InstallService.Execute(plan, writeRegistry);
                     output.Ok = result.Ok;
                     output.Message = result.SummaryText;
                     output.Data["copiedFiles"] = result.CopiedFiles;
@@ -41,6 +43,8 @@ namespace WeChatPlus.Install
                     output.Data["shortcutMode"] = result.ShortcutMode;
                     output.Data["wroteRegistration"] = result.WroteRegistration;
                     output.Data["registrationPath"] = result.RegistrationPath;
+                    output.Data["wroteRegistry"] = result.WroteRegistry;
+                    output.Data["registryMode"] = result.RegistryMode;
                     output.Data["errors"] = result.Errors;
                 }
             }

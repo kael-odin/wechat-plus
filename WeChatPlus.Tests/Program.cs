@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Microsoft.Win32;
 using WeChatPlus.Core.Contracts;
 using WeChatPlus.Core.Models;
 using WeChatPlus.Core.Services;
@@ -35,8 +36,10 @@ namespace WeChatPlus.Tests
                 Run("defines installer manifest", DefinesInstallerManifest);
                 Run("creates install plan", CreatesInstallPlan);
                 Run("executes install copy", ExecutesInstallCopy);
+                Run("writes uninstall registry only when requested", WritesUninstallRegistryOnlyWhenRequested);
                 Run("creates uninstall plan", CreatesUninstallPlan);
                 Run("executes uninstall cleanup", ExecutesUninstallCleanup);
+                Run("removes uninstall registry only when requested", RemovesUninstallRegistryOnlyWhenRequested);
                 Run("validates release package files", ValidatesReleasePackageFiles);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
@@ -457,6 +460,46 @@ namespace WeChatPlus.Tests
             AssertContains(result.SummaryText, result.ShortcutMode, "install summary shortcut mode");
         }
 
+        private static void WritesUninstallRegistryOnlyWhenRequested()
+        {
+            string packageRoot = CreateTempRoot();
+            string installRoot = CreateTempRoot();
+            string startMenuRoot = CreateTempRoot();
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+            manifest.UninstallRegistryKey = CreateTestRegistryKey();
+
+            try
+            {
+                for (int i = 0; i < manifest.Files.Length; i++)
+                {
+                    File.WriteAllText(Path.Combine(packageRoot, manifest.Files[i].Path), manifest.Files[i].Role);
+                }
+
+                InstallPlan plan = InstallPlanner.Create(manifest, packageRoot, installRoot, startMenuRoot);
+                InstallResult defaultResult = InstallService.Execute(plan);
+
+                AssertTrue(defaultResult.Ok, "default install ok");
+                AssertTrue(!defaultResult.WroteRegistry, "default install does not write registry");
+                AssertEqual("not-requested", defaultResult.RegistryMode, "default install registry mode");
+                AssertTrue(Registry.CurrentUser.OpenSubKey(manifest.UninstallRegistryKey) == null, "default install registry missing");
+
+                InstallResult registryResult = InstallService.Execute(plan, true);
+                RegistryKey key = Registry.CurrentUser.OpenSubKey(manifest.UninstallRegistryKey);
+
+                AssertTrue(registryResult.Ok, "registry install ok");
+                AssertTrue(registryResult.WroteRegistry, "registry install wrote registry");
+                AssertEqual("hkcu-uninstall-key", registryResult.RegistryMode, "registry install mode");
+                AssertEqual(manifest.ProductName, key.GetValue("DisplayName") as string, "registry display name");
+                AssertEqual(plan.UninstallCommand, key.GetValue("UninstallString") as string, "registry uninstall string");
+                AssertContains(registryResult.SummaryText, "registry hkcu-uninstall-key", "registry install summary");
+                key.Close();
+            }
+            finally
+            {
+                DeleteTestRegistryKey(manifest.UninstallRegistryKey);
+            }
+        }
+
         private static void CreatesUninstallPlan()
         {
             string installRoot = CreateTempRoot();
@@ -497,6 +540,42 @@ namespace WeChatPlus.Tests
             AssertTrue(!File.Exists(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "uninstall removed shortcut");
             AssertTrue(Directory.Exists(plan.UserDataDirectory), "uninstall preserved user data");
             AssertContains(result.SummaryText, "removed", "uninstall summary");
+        }
+
+        private static void RemovesUninstallRegistryOnlyWhenRequested()
+        {
+            string installRoot = CreateTempRoot();
+            string startMenuRoot = CreateTempRoot();
+            string dataRoot = CreateTempRoot();
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+            manifest.UninstallRegistryKey = CreateTestRegistryKey();
+            UninstallPlan plan = UninstallPlanner.Create(manifest, installRoot, startMenuRoot, dataRoot);
+
+            try
+            {
+                RegistryKey created = Registry.CurrentUser.CreateSubKey(manifest.UninstallRegistryKey);
+                created.SetValue("DisplayName", manifest.ProductName);
+                created.Close();
+
+                UninstallResult defaultResult = UninstallService.Execute(plan, false);
+
+                AssertTrue(defaultResult.Ok, "default uninstall ok");
+                AssertTrue(!defaultResult.RemovedRegistry, "default uninstall does not remove registry");
+                AssertEqual("not-requested", defaultResult.RegistryMode, "default uninstall registry mode");
+                AssertTrue(Registry.CurrentUser.OpenSubKey(manifest.UninstallRegistryKey) != null, "default uninstall registry kept");
+
+                UninstallResult registryResult = UninstallService.Execute(plan, false, true);
+
+                AssertTrue(registryResult.Ok, "registry uninstall ok");
+                AssertTrue(registryResult.RemovedRegistry, "registry uninstall removed registry");
+                AssertEqual("hkcu-uninstall-key", registryResult.RegistryMode, "registry uninstall mode");
+                AssertTrue(Registry.CurrentUser.OpenSubKey(manifest.UninstallRegistryKey) == null, "registry uninstall registry missing");
+                AssertContains(registryResult.SummaryText, "registry hkcu-uninstall-key removed", "registry uninstall summary");
+            }
+            finally
+            {
+                DeleteTestRegistryKey(manifest.UninstallRegistryKey);
+            }
         }
 
         private static void ValidatesReleasePackageFiles()
@@ -787,6 +866,22 @@ namespace WeChatPlus.Tests
             string root = Path.Combine(Path.GetTempPath(), "WeChatPlusTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
             return root;
+        }
+
+        private static string CreateTestRegistryKey()
+        {
+            return @"Software\WeChatPlusTests\" + Guid.NewGuid().ToString("N");
+        }
+
+        private static void DeleteTestRegistryKey(string keyPath)
+        {
+            try
+            {
+                Registry.CurrentUser.DeleteSubKeyTree(keyPath);
+            }
+            catch
+            {
+            }
         }
 
         private static AccountRecord FindAccount(AccountRecord[] accounts, string id)

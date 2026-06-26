@@ -9,10 +9,17 @@ namespace WeChatPlus.Core.Services
     {
         public static UninstallResult Execute(UninstallPlan plan, bool removeUserData)
         {
+            return Execute(plan, removeUserData, false);
+        }
+
+        public static UninstallResult Execute(UninstallPlan plan, bool removeUserData, bool removeRegistry)
+        {
             ArrayList errors = new ArrayList();
             int runtimeFiles = DeleteFiles(plan == null ? null : plan.RuntimeFilePaths, errors);
             int shortcuts = DeleteFiles(plan == null ? null : plan.ShortcutPaths, errors);
             bool removedUserData = false;
+            string registryMode;
+            bool registry = RemoveRegistry(plan, removeRegistry, errors, out registryMode);
 
             if (plan != null && removeUserData && Directory.Exists(plan.UserDataDirectory))
             {
@@ -36,6 +43,8 @@ namespace WeChatPlus.Core.Services
             result.RemovedShortcuts = shortcuts;
             result.RemovedUserData = removedUserData;
             result.PreservedUserData = plan != null && plan.PreserveUserData && !removeUserData;
+            result.RemovedRegistry = registry;
+            result.RegistryMode = registryMode;
             result.Errors = ToStringArray(errors);
             result.SummaryText = BuildSummary(result);
             return result;
@@ -91,6 +100,25 @@ namespace WeChatPlus.Core.Services
             }
         }
 
+        private static bool RemoveRegistry(UninstallPlan plan, bool removeRegistry, ArrayList errors, out string registryMode)
+        {
+            registryMode = removeRegistry ? InstallRegistryService.Mode : "not-requested";
+            if (!removeRegistry || plan == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                return InstallRegistryService.Remove(plan.RegistryKey);
+            }
+            catch (Exception ex)
+            {
+                errors.Add((plan.RegistryKey ?? "registry") + ": " + ex.Message);
+                return false;
+            }
+        }
+
         private static string[] ToStringArray(ArrayList values)
         {
             string[] result = new string[values.Count];
@@ -105,7 +133,8 @@ namespace WeChatPlus.Core.Services
         private static string BuildSummary(UninstallResult result)
         {
             string dataText = result.RemovedUserData ? "user data removed" : "user data preserved";
-            return "removed " + result.RemovedRuntimeFiles + " runtime files and " + result.RemovedShortcuts + " shortcuts; " + dataText;
+            string registryText = result.RemovedRegistry ? "registry " + result.RegistryMode + " removed" : "registry " + result.RegistryMode;
+            return "removed " + result.RemovedRuntimeFiles + " runtime files and " + result.RemovedShortcuts + " shortcuts; " + dataText + "; " + registryText;
         }
     }
 }

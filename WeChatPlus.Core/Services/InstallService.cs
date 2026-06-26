@@ -10,6 +10,11 @@ namespace WeChatPlus.Core.Services
     {
         public static InstallResult Execute(InstallPlan plan)
         {
+            return Execute(plan, false);
+        }
+
+        public static InstallResult Execute(InstallPlan plan, bool writeRegistry)
+        {
             ArrayList errors = new ArrayList();
             int copied = CopyFiles(plan == null ? null : plan.FileCopies, errors);
             string shortcutPath;
@@ -17,6 +22,8 @@ namespace WeChatPlus.Core.Services
             bool shortcut = CreateShortcut(plan, errors, out shortcutPath, out shortcutMode);
             string registrationPath;
             bool registration = WriteRegistration(plan, errors, out registrationPath);
+            string registryMode;
+            bool registry = WriteRegistry(plan, writeRegistry, errors, out registryMode);
 
             InstallResult result = new InstallResult();
             result.Ok = errors.Count == 0;
@@ -26,6 +33,8 @@ namespace WeChatPlus.Core.Services
             result.ShortcutMode = shortcutMode;
             result.WroteRegistration = registration;
             result.RegistrationPath = registrationPath;
+            result.WroteRegistry = registry;
+            result.RegistryMode = registryMode;
             result.Errors = ToStringArray(errors);
             result.SummaryText = BuildSummary(result);
             return result;
@@ -176,6 +185,25 @@ namespace WeChatPlus.Core.Services
             }
         }
 
+        private static bool WriteRegistry(InstallPlan plan, bool writeRegistry, ArrayList errors, out string registryMode)
+        {
+            registryMode = writeRegistry ? InstallRegistryService.Mode : "not-requested";
+            if (!writeRegistry || plan == null || plan.Registration == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                return InstallRegistryService.Write(plan.Registration);
+            }
+            catch (Exception ex)
+            {
+                errors.Add((plan.RegistryKey ?? "registry") + ": " + ex.Message);
+                return false;
+            }
+        }
+
         private static string[] ToStringArray(ArrayList values)
         {
             string[] result = new string[values.Count];
@@ -189,7 +217,7 @@ namespace WeChatPlus.Core.Services
 
         private static string BuildSummary(InstallResult result)
         {
-            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? result.ShortcutMode : "not created") + "; registration " + (result.WroteRegistration ? "written" : "not written");
+            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? result.ShortcutMode : "not created") + "; registration " + (result.WroteRegistration ? "written" : "not written") + "; registry " + result.RegistryMode;
         }
     }
 }

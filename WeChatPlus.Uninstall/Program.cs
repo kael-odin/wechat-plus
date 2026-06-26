@@ -19,6 +19,7 @@ namespace WeChatPlus.Uninstall
                 string startMenuRoot = GetOption(options, "start-menu-root", manifest.StartMenuFolder);
                 string dataRoot = GetOption(options, "data-root", AppPaths.GetDefaultDataRoot());
                 bool removeUserData = HasFlag(args, "--remove-user-data");
+                bool removeRegistry = HasFlag(args, "--remove-registry");
                 bool planOnly = HasFlag(args, "--plan");
 
                 UninstallPlan plan = UninstallPlanner.Create(manifest, installRoot, startMenuRoot, dataRoot);
@@ -29,15 +30,19 @@ namespace WeChatPlus.Uninstall
                 output.Data["preserveUserData"] = plan.PreserveUserData && !removeUserData;
                 output.Data["runtimeFileCount"] = plan.RuntimeFilePaths.Length;
                 output.Data["shortcutCount"] = plan.ShortcutPaths.Length;
+                output.Data["registryKey"] = plan.RegistryKey;
+                output.Data["removeRegistry"] = removeRegistry;
 
                 if (!planOnly)
                 {
-                    UninstallResult result = UninstallService.Execute(plan, removeUserData);
+                    UninstallResult result = UninstallService.Execute(plan, removeUserData, removeRegistry);
                     output.Ok = result.Ok;
                     output.Message = result.SummaryText;
                     output.Data["removedRuntimeFiles"] = result.RemovedRuntimeFiles;
                     output.Data["removedShortcuts"] = result.RemovedShortcuts;
                     output.Data["removedUserData"] = result.RemovedUserData;
+                    output.Data["removedRegistry"] = result.RemovedRegistry;
+                    output.Data["registryMode"] = result.RegistryMode;
                     output.Data["errors"] = result.Errors;
                 }
             }

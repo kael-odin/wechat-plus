@@ -74,6 +74,7 @@
     <Compile Include="Services\HelperProcessClient.cs" />
     <Compile Include="Services\HelperIntegrityVerifier.cs" />
     <Compile Include="Services\InstallPlanner.cs" />
+    <Compile Include="Services\InstallRegistryService.cs" />
     <Compile Include="Services\InstallService.cs" />
     <Compile Include="Services\LicenseActivationRequest.cs" />
     <Compile Include="Services\LicenseApiClient.cs" />
