@@ -52,10 +52,10 @@ WeChat Plus 的商业化边界按以下方式设计：
 ```powershell
 .\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --plan
 .\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --package-root .\WeChatPlus.Shell\bin\Debug --install-root "$env:TEMP\WeChatPlusInstall" --start-menu-root "$env:TEMP\WeChatPlusStart"
-.\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --package-root .\WeChatPlus.Shell\bin\Debug --install-root "$env:TEMP\WeChatPlusInstall" --start-menu-root "$env:TEMP\WeChatPlusStart" --write-registry
+.\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --package-root .\WeChatPlus.Shell\bin\Debug --install-root "$env:TEMP\WeChatPlusInstall" --start-menu-root "$env:TEMP\WeChatPlusStart" --write-registry --rollback-on-failure
 ```
 
-`WeChatPlus.Install.exe` 使用 `InstallerManifest`/`InstallPlanner` 生成安装计划，复制清单列出的运行文件，通过 `WScript.Shell` late binding 创建开始菜单 `.lnk`，并在 JSON 输出中返回 `shortcutMode`（`windows-shell-link` 或 `fallback-target-file`）；同时写入 `install-registration.json` 作为卸载注册表登记预演。默认不写注册表，只有显式传入 `--write-registry` 时才写入 HKCU 卸载登记，并返回 `registryMode`。
+`WeChatPlus.Install.exe` 使用 `InstallerManifest`/`InstallPlanner` 生成安装计划，复制清单列出的运行文件，通过 `WScript.Shell` late binding 创建开始菜单 `.lnk`，并在 JSON 输出中返回 `shortcutMode`（`windows-shell-link` 或 `fallback-target-file`）；同时写入 `install-registration.json` 作为卸载注册表登记预演。默认不写注册表，只有显式传入 `--write-registry` 时才写入 HKCU 卸载登记，并返回 `registryMode`。传入 `--rollback-on-failure` 后，安装失败会尝试删除已复制文件、快捷方式、登记 JSON 和本次写入的 HKCU 卸载登记。
 
 卸载入口：
 
@@ -65,7 +65,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 .\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe --remove-registry
 ```
 
-`WeChatPlus.Uninstall.exe` 使用 `InstallerManifest`/`UninstallPlanner` 生成清理计划，只删除清单列出的运行文件和快捷方式；默认保留用户数据目录且不删除注册表，只有显式传入 `--remove-registry` 时才删除 HKCU 卸载登记。后续完整安装器仍需补齐提权、回滚和更完整的数据清理 UI。
+`WeChatPlus.Uninstall.exe` 使用 `InstallerManifest`/`UninstallPlanner` 生成清理计划，只删除清单列出的运行文件和快捷方式；默认保留用户数据目录且不删除注册表，只有显式传入 `--remove-registry` 时才删除 HKCU 卸载登记。后续完整安装器仍需补齐提权、更完整的数据清理 UI 和正式 MSI/EXE 打包流程。
 
 注意：直接构建原始 `RevokeMsgPatcher.sln` 在当前机器上会因为缺少对应 Targeting Pack、NuGet 包和旧 MSBuild 编译能力出现错误；新的 MVP 工作集中在 `WeChatPlus.sln`。
 
@@ -85,7 +85,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 设置页：商用壳可只读展示运行环境检查、运行包校验结果、缺失必需文件、数据目录、运行目录、助手组件、更新清单、账号、话术、授权、隐私锁、开源组件声明和诊断日志路径及存在状态，便于定位运行包和本地数据问题。
 - 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭选中微信进程、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口、诊断日志导出。
 - 构建输出：商用壳会把独立助手组件、中立 Core、GPLv3 `LICENSE`、`README.md`、`components.json` 和 `update-manifest.json` 复制到自身输出目录，形成最小 MVP 运行包。
-- 安装清单：Core 提供默认安装目录、开始菜单快捷方式、卸载入口、卸载注册表键、运行包文件移除列表、默认保留用户数据策略和 GPL 助手源码地址等结构化元数据，供安装器/打包器消费；当前安装入口已支持真实 `.lnk` 创建和显式 HKCU 卸载登记写入/删除，但还不是完整 MSI/EXE 安装器。
+- 安装清单：Core 提供默认安装目录、开始菜单快捷方式、卸载入口、卸载注册表键、运行包文件移除列表、默认保留用户数据策略和 GPL 助手源码地址等结构化元数据，供安装器/打包器消费；当前安装入口已支持真实 `.lnk` 创建、显式 HKCU 卸载登记写入/删除和失败回滚，但还不是完整 MSI/EXE 安装器。
 - 测试：命令解析、JSON 输出、助手版本/运行环境/窗口 JSON 解析、工作区聚焦状态文案、诊断日志写入/导出、话术种子/搜索/常用短语、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除/排序/离线同步、隐私锁状态持久化、开源组件声明、运行包清单、安装清单、运行包文件校验、助手 SHA-256 校验、设置摘要、运行环境检查、试用/本地激活授权状态、授权功能限制和更新清单状态。
 
 下一步：

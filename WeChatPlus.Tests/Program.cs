@@ -37,6 +37,7 @@ namespace WeChatPlus.Tests
                 Run("creates install plan", CreatesInstallPlan);
                 Run("executes install copy", ExecutesInstallCopy);
                 Run("writes uninstall registry only when requested", WritesUninstallRegistryOnlyWhenRequested);
+                Run("rolls back partial install when requested", RollsBackPartialInstallWhenRequested);
                 Run("creates uninstall plan", CreatesUninstallPlan);
                 Run("executes uninstall cleanup", ExecutesUninstallCleanup);
                 Run("removes uninstall registry only when requested", RemovesUninstallRegistryOnlyWhenRequested);
@@ -493,6 +494,41 @@ namespace WeChatPlus.Tests
                 AssertEqual(plan.UninstallCommand, key.GetValue("UninstallString") as string, "registry uninstall string");
                 AssertContains(registryResult.SummaryText, "registry hkcu-uninstall-key", "registry install summary");
                 key.Close();
+            }
+            finally
+            {
+                DeleteTestRegistryKey(manifest.UninstallRegistryKey);
+            }
+        }
+
+        private static void RollsBackPartialInstallWhenRequested()
+        {
+            string packageRoot = CreateTempRoot();
+            string installRoot = CreateTempRoot();
+            string startMenuRoot = CreateTempRoot();
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+            manifest.UninstallRegistryKey = CreateTestRegistryKey();
+
+            try
+            {
+                File.WriteAllText(Path.Combine(packageRoot, manifest.Files[0].Path), manifest.Files[0].Role);
+
+                InstallPlan plan = InstallPlanner.Create(manifest, packageRoot, installRoot, startMenuRoot);
+                InstallResult result = InstallService.Execute(plan, true, true);
+
+                AssertTrue(!result.Ok, "rollback install reports failure");
+                AssertTrue(result.RolledBack, "rollback executed");
+                AssertTrue(result.RolledBackFiles >= 1, "rollback removed copied files");
+                AssertTrue(result.RolledBackShortcut, "rollback removed shortcut");
+                AssertTrue(result.RolledBackRegistration, "rollback removed registration");
+                AssertTrue(result.RolledBackRegistry, "rollback removed registry");
+                AssertTrue(!File.Exists(Path.Combine(installRoot, manifest.Files[0].Path)), "rollback removed copied file");
+                AssertTrue(!File.Exists(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "rollback removed shortcut file");
+                AssertTrue(!File.Exists(Path.Combine(installRoot, "install-registration.json")), "rollback removed registration file");
+                AssertTrue(Registry.CurrentUser.OpenSubKey(manifest.UninstallRegistryKey) == null, "rollback removed registry key");
+                AssertTrue(!Directory.Exists(installRoot), "rollback removed empty install directory");
+                AssertTrue(!Directory.Exists(startMenuRoot), "rollback removed empty start menu directory");
+                AssertContains(result.SummaryText, "rollback", "rollback summary");
             }
             finally
             {

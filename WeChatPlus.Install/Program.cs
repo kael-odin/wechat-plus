@@ -20,6 +20,7 @@ namespace WeChatPlus.Install
                 string startMenuRoot = GetOption(options, "start-menu-root", manifest.StartMenuFolder);
                 bool planOnly = HasFlag(args, "--plan");
                 bool writeRegistry = HasFlag(args, "--write-registry");
+                bool rollbackOnFailure = HasFlag(args, "--rollback-on-failure");
 
                 InstallPlan plan = InstallPlanner.Create(manifest, packageRoot, installRoot, startMenuRoot);
                 output = HelperCommandResult.Success(planOnly ? "install plan" : "install execute");
@@ -31,10 +32,11 @@ namespace WeChatPlus.Install
                 output.Data["uninstallCommand"] = plan.UninstallCommand;
                 output.Data["registryKey"] = plan.RegistryKey;
                 output.Data["writeRegistry"] = writeRegistry;
+                output.Data["rollbackOnFailure"] = rollbackOnFailure;
 
                 if (!planOnly)
                 {
-                    InstallResult result = InstallService.Execute(plan, writeRegistry);
+                    InstallResult result = InstallService.Execute(plan, writeRegistry, rollbackOnFailure);
                     output.Ok = result.Ok;
                     output.Message = result.SummaryText;
                     output.Data["copiedFiles"] = result.CopiedFiles;
@@ -45,6 +47,11 @@ namespace WeChatPlus.Install
                     output.Data["registrationPath"] = result.RegistrationPath;
                     output.Data["wroteRegistry"] = result.WroteRegistry;
                     output.Data["registryMode"] = result.RegistryMode;
+                    output.Data["rolledBack"] = result.RolledBack;
+                    output.Data["rolledBackFiles"] = result.RolledBackFiles;
+                    output.Data["rolledBackShortcut"] = result.RolledBackShortcut;
+                    output.Data["rolledBackRegistration"] = result.RolledBackRegistration;
+                    output.Data["rolledBackRegistry"] = result.RolledBackRegistry;
                     output.Data["errors"] = result.Errors;
                 }
             }

@@ -20,6 +20,16 @@ namespace WeChatPlus.Core.Models
 
         public string RegistryMode { get; set; }
 
+        public bool RolledBack { get; set; }
+
+        public int RolledBackFiles { get; set; }
+
+        public bool RolledBackShortcut { get; set; }
+
+        public bool RolledBackRegistration { get; set; }
+
+        public bool RolledBackRegistry { get; set; }
+
         public string[] Errors { get; set; }
 
         public string SummaryText { get; set; }

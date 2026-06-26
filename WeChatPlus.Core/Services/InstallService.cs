@@ -15,6 +15,11 @@ namespace WeChatPlus.Core.Services
 
         public static InstallResult Execute(InstallPlan plan, bool writeRegistry)
         {
+            return Execute(plan, writeRegistry, false);
+        }
+
+        public static InstallResult Execute(InstallPlan plan, bool writeRegistry, bool rollbackOnFailure)
+        {
             ArrayList errors = new ArrayList();
             int copied = CopyFiles(plan == null ? null : plan.FileCopies, errors);
             string shortcutPath;
@@ -36,6 +41,12 @@ namespace WeChatPlus.Core.Services
             result.WroteRegistry = registry;
             result.RegistryMode = registryMode;
             result.Errors = ToStringArray(errors);
+            if (!result.Ok && rollbackOnFailure)
+            {
+                Rollback(plan, result, errors);
+                result.Errors = ToStringArray(errors);
+            }
+
             result.SummaryText = BuildSummary(result);
             return result;
         }
@@ -204,6 +215,92 @@ namespace WeChatPlus.Core.Services
             }
         }
 
+        private static void Rollback(InstallPlan plan, InstallResult result, ArrayList errors)
+        {
+            if (plan == null)
+            {
+                return;
+            }
+
+            result.RolledBack = true;
+            result.RolledBackFiles = DeleteCopiedFiles(plan.FileCopies, errors);
+            result.RolledBackShortcut = DeleteFile(result.ShortcutPath, errors);
+            result.RolledBackRegistration = DeleteFile(result.RegistrationPath, errors);
+            if (result.WroteRegistry)
+            {
+                try
+                {
+                    result.RolledBackRegistry = InstallRegistryService.Remove(plan.RegistryKey);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add((plan.RegistryKey ?? "registry") + ": rollback " + ex.Message);
+                }
+            }
+
+            RemoveDirectoryIfEmpty(plan.StartMenuDirectory, errors);
+            RemoveDirectoryIfEmpty(plan.InstallDirectory, errors);
+        }
+
+        private static int DeleteCopiedFiles(InstallFileCopy[] copies, ArrayList errors)
+        {
+            if (copies == null)
+            {
+                return 0;
+            }
+
+            int removed = 0;
+            for (int i = copies.Length - 1; i >= 0; i--)
+            {
+                InstallFileCopy copy = copies[i];
+                if (copy != null && DeleteFile(copy.DestinationPath, errors))
+                {
+                    removed++;
+                }
+            }
+
+            return removed;
+        }
+
+        private static bool DeleteFile(string path, ArrayList errors)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                return false;
+            }
+
+            try
+            {
+                File.Delete(path);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errors.Add(path + ": rollback " + ex.Message);
+                return false;
+            }
+        }
+
+        private static void RemoveDirectoryIfEmpty(string path, ArrayList errors)
+        {
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+            {
+                return;
+            }
+
+            try
+            {
+                if (Directory.GetFiles(path).Length == 0 && Directory.GetDirectories(path).Length == 0)
+                {
+                    Directory.Delete(path, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                errors.Add(path + ": rollback " + ex.Message);
+            }
+        }
+
         private static string[] ToStringArray(ArrayList values)
         {
             string[] result = new string[values.Count];
@@ -217,7 +314,8 @@ namespace WeChatPlus.Core.Services
 
         private static string BuildSummary(InstallResult result)
         {
-            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? result.ShortcutMode : "not created") + "; registration " + (result.WroteRegistration ? "written" : "not written") + "; registry " + result.RegistryMode;
+            string rollbackText = result.RolledBack ? "; rollback files " + result.RolledBackFiles : string.Empty;
+            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? result.ShortcutMode : "not created") + "; registration " + (result.WroteRegistration ? "written" : "not written") + "; registry " + result.RegistryMode + rollbackText;
         }
     }
 }
