@@ -384,6 +384,11 @@ namespace WeChatPlus.Tests
             AssertContains(manifest.OpenHelperSourceUrl, "huiyadanli/RevokeMsgPatcher", "installer helper source url");
             AssertTrue(manifest.Files.Length >= 7, "installer file count");
             AssertPackageFile(manifest.RuntimePackage, "WeChatPlus.OpenHelper.exe", "OpenHelper");
+            AssertContains(manifest.UninstallRegistryKey, "WeChat Plus", "installer uninstall registry key");
+            AssertTrue(manifest.PreserveUserDataOnUninstall, "installer preserve user data");
+            AssertContains(manifest.UserDataDirectoryName, "WeChat Plus", "installer user data directory");
+            AssertContains(manifest.ShortcutsToRemove[0], "WeChat Plus.lnk", "installer shortcut removal");
+            AssertEqual(manifest.Files.Length.ToString(), manifest.RuntimeFilesToRemove.Length.ToString(), "installer uninstall file count");
         }
 
         private static void ValidatesReleasePackageFiles()
