@@ -46,6 +46,7 @@ namespace WeChatPlus.Tests
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
                 Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
                 Run("creates diagnostics support package", CreatesDiagnosticsSupportPackage);
+                Run("builds diagnostics package directory", BuildsDiagnosticsPackageDirectory);
                 Run("builds settings summary", BuildsSettingsSummary);
                 Run("formats runtime environment checks", FormatsRuntimeEnvironmentChecks);
                 Run("persists privacy lock state", PersistsPrivacyLockState);
@@ -900,6 +901,16 @@ namespace WeChatPlus.Tests
             AssertTrue(report.IndexOf("SECRET-LICENSE-KEY-9999", StringComparison.Ordinal) < 0, "diagnostics hides raw key");
             AssertTrue(report.IndexOf("PRIVATE ACCOUNT CONTENT", StringComparison.Ordinal) < 0, "diagnostics hides accounts content");
             AssertTrue(report.IndexOf("PRIVATE REPLY CONTENT", StringComparison.Ordinal) < 0, "diagnostics hides replies content");
+        }
+
+        private static void BuildsDiagnosticsPackageDirectory()
+        {
+            string parent = CreateTempRoot();
+            DateTime timestamp = new DateTime(2030, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+
+            string directory = DiagnosticsPackageService.BuildPackageDirectory(parent, timestamp);
+
+            AssertEqual(Path.Combine(parent, "wechat-plus-support-20300102030405"), directory, "diagnostics package directory");
         }
 
         private static void BuildsSettingsSummary()

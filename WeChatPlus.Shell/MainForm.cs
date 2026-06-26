@@ -1030,11 +1030,9 @@ namespace WeChatPlus.Shell
 
         private void ExportDiagnosticsClicked(object sender, EventArgs e)
         {
-            using (SaveFileDialog dialog = new SaveFileDialog())
+            using (FolderBrowserDialog dialog = new FolderBrowserDialog())
             {
-                dialog.Title = "导出诊断日志";
-                dialog.Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*";
-                dialog.FileName = "wechat-plus-diagnostics.log";
+                dialog.Description = "选择诊断包导出目录";
                 if (dialog.ShowDialog(this) != DialogResult.OK)
                 {
                     return;
@@ -1042,12 +1040,21 @@ namespace WeChatPlus.Shell
 
                 try
                 {
-                    _diagnosticsLog.ExportTo(dialog.FileName);
-                    _workspaceStatus.Text = "诊断日志已导出：" + dialog.FileName;
+                    string packageDirectory = DiagnosticsPackageService.BuildPackageDirectory(dialog.SelectedPath, DateTime.UtcNow);
+                    DiagnosticsPackageResult result = DiagnosticsPackageService.Create(
+                        _dataRoot,
+                        AppDomain.CurrentDomain.BaseDirectory,
+                        packageDirectory,
+                        ReleasePackageManifest.CreateDefault());
+                    _workspaceStatus.Text = "诊断包已生成：" + result.PackageDirectory;
+                    MessageBox.Show(
+                        "诊断包已生成：" + result.PackageDirectory + Environment.NewLine +
+                        "请将该目录打包后发给客服。诊断包不包含账号和话术内容。",
+                        "诊断包");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("导出诊断日志失败：" + ex.Message, "诊断日志");
+                    MessageBox.Show("生成诊断包失败：" + ex.Message, "诊断包");
                 }
             }
         }

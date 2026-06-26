@@ -7,6 +7,16 @@ namespace WeChatPlus.Core.Services
 {
     public static class DiagnosticsPackageService
     {
+        public static string BuildPackageDirectory(string parentDirectory, DateTime timestampUtc)
+        {
+            if (string.IsNullOrWhiteSpace(parentDirectory))
+            {
+                throw new ArgumentException("Missing diagnostics parent directory.", "parentDirectory");
+            }
+
+            return Path.Combine(parentDirectory, "wechat-plus-support-" + timestampUtc.ToUniversalTime().ToString("yyyyMMddHHmmss"));
+        }
+
         public static DiagnosticsPackageResult Create(
             string dataRoot,
             string runtimeRoot,
