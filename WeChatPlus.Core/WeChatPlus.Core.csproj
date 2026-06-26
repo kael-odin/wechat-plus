@@ -57,6 +57,7 @@
     <Compile Include="Services\HelperProcessClient.cs" />
     <Compile Include="Services\LicenseActivationRequest.cs" />
     <Compile Include="Services\LicenseApiClient.cs" />
+    <Compile Include="Services\LicenseFeaturePolicy.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
     <Compile Include="Services\TrialLicenseService.cs" />
     <Compile Include="Services\WorkspaceStatusFormatter.cs" />

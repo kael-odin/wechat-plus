@@ -34,6 +34,7 @@ namespace WeChatPlus.Tests
                 Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
+                Run("enforces trial feature limits", EnforcesTrialFeatureLimits);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
                 Console.WriteLine("All tests passed: " + _passed);
                 return 0;
@@ -144,6 +145,28 @@ namespace WeChatPlus.Tests
             LicenseState persisted = reloaded.GetOrCreateTrial();
             AssertEqual("personal", persisted.Plan, "persisted activated plan");
             AssertEqual("ABC...CRET", persisted.LicenseKeyMasked, "persisted masked key");
+        }
+
+        private static void EnforcesTrialFeatureLimits()
+        {
+            LicenseState trial = new LicenseState();
+            trial.Plan = "trial";
+            trial.ExpiresAtUtc = DateTime.UtcNow.AddDays(1);
+
+            LicenseState personal = new LicenseState();
+            personal.Plan = "personal";
+            personal.ExpiresAtUtc = DateTime.UtcNow.AddDays(1);
+
+            AssertTrue(LicenseFeaturePolicy.CanAddAccount(trial, 1), "trial can add second account");
+            AssertTrue(!LicenseFeaturePolicy.CanAddAccount(trial, 2), "trial blocks third account");
+            AssertTrue(!LicenseFeaturePolicy.CanImportOrExportReplies(trial), "trial blocks import export");
+            AssertTrue(LicenseFeaturePolicy.CanAddAccount(personal, 12), "personal can add account");
+            AssertTrue(LicenseFeaturePolicy.CanImportOrExportReplies(personal), "personal import export");
+            AssertContains(LicenseFeaturePolicy.GetAccountLimitMessage(trial), "试用版最多可管理 2 个微信账号", "trial limit message");
+
+            personal.ExpiresAtUtc = DateTime.UtcNow.AddDays(-1);
+            AssertTrue(!LicenseFeaturePolicy.CanAddAccount(personal, 0), "expired personal blocks account");
+            AssertTrue(!LicenseFeaturePolicy.CanImportOrExportReplies(personal), "expired personal blocks import export");
         }
 
         private static void PersistsAccountRecords()

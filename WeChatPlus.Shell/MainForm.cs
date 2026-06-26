@@ -403,6 +403,16 @@ namespace WeChatPlus.Shell
 
         private void AddAccountClicked(object sender, EventArgs e)
         {
+            LicenseState state = _licenseService.GetOrCreateTrial();
+            if (!LicenseFeaturePolicy.CanAddAccount(state, _accountRepository.GetAll().Length))
+            {
+                string message = LicenseFeaturePolicy.GetAccountLimitMessage(state);
+                LogDiagnostic("license.account-limit", message, null);
+                _workspaceStatus.Text = message;
+                MessageBox.Show(message, "添加账号");
+                return;
+            }
+
             if (!File.Exists(_helperPath))
             {
                 MessageBox.Show("未找到独立开源助手组件，无法启动微信。请先构建或安装 WeChatPlus.OpenHelper.exe。", "助手组件不可用");
@@ -544,6 +554,16 @@ namespace WeChatPlus.Shell
 
         private void ImportClicked(object sender, EventArgs e)
         {
+            LicenseState state = _licenseService.GetOrCreateTrial();
+            if (!LicenseFeaturePolicy.CanImportOrExportReplies(state))
+            {
+                string message = LicenseFeaturePolicy.GetImportExportLimitMessage(state);
+                LogDiagnostic("license.quick-reply-import", message, null);
+                _workspaceStatus.Text = message;
+                MessageBox.Show(message, "导入话术");
+                return;
+            }
+
             OpenFileDialog dialog = new OpenFileDialog();
             dialog.Filter = "话术文件|*.json;*.csv|JSON 文件|*.json|CSV 文件|*.csv";
             if (dialog.ShowDialog(this) != DialogResult.OK)
@@ -570,6 +590,16 @@ namespace WeChatPlus.Shell
 
         private void ExportClicked(object sender, EventArgs e)
         {
+            LicenseState state = _licenseService.GetOrCreateTrial();
+            if (!LicenseFeaturePolicy.CanImportOrExportReplies(state))
+            {
+                string message = LicenseFeaturePolicy.GetImportExportLimitMessage(state);
+                LogDiagnostic("license.quick-reply-export", message, null);
+                _workspaceStatus.Text = message;
+                MessageBox.Show(message, "导出话术");
+                return;
+            }
+
             SaveFileDialog dialog = new SaveFileDialog();
             dialog.Filter = "JSON 文件|*.json";
             dialog.FileName = "wechat-plus-quick-replies.json";
