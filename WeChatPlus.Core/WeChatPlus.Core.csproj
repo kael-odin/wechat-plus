@@ -47,6 +47,7 @@
     <Compile Include="Contracts\HelperWindowResultParser.cs" />
     <Compile Include="Contracts\JsonResultWriter.cs" />
     <Compile Include="Models\AccountRecord.cs" />
+    <Compile Include="Models\DiagnosticsPackageResult.cs" />
     <Compile Include="Models\HelperIntegrityStatus.cs" />
     <Compile Include="Models\InstallFileCopy.cs" />
     <Compile Include="Models\InstallPlan.cs" />
@@ -72,6 +73,7 @@
     <Compile Include="Services\AppPaths.cs" />
     <Compile Include="Services\ComponentRepository.cs" />
     <Compile Include="Services\DiagnosticsLogService.cs" />
+    <Compile Include="Services\DiagnosticsPackageService.cs" />
     <Compile Include="Services\HelperProcessClient.cs" />
     <Compile Include="Services\HelperIntegrityVerifier.cs" />
     <Compile Include="Services\InstallPlanner.cs" />

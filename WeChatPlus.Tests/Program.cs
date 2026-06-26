@@ -45,6 +45,7 @@ namespace WeChatPlus.Tests
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
                 Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
+                Run("creates diagnostics support package", CreatesDiagnosticsSupportPackage);
                 Run("builds settings summary", BuildsSettingsSummary);
                 Run("formats runtime environment checks", FormatsRuntimeEnvironmentChecks);
                 Run("persists privacy lock state", PersistsPrivacyLockState);
@@ -860,6 +861,45 @@ namespace WeChatPlus.Tests
             AssertContains(log, "InvalidOperationException", "diagnostics exception type");
             AssertContains(log, "missing helper", "diagnostics exception message");
             AssertEqual(log, exported, "exported diagnostics content");
+        }
+
+        private static void CreatesDiagnosticsSupportPackage()
+        {
+            string dataRoot = CreateTempRoot();
+            string runtimeRoot = CreateTempRoot();
+            string packageRoot = Path.Combine(CreateTempRoot(), "support-package");
+
+            File.WriteAllText(Path.Combine(runtimeRoot, "WeChatPlus.Shell.exe"), "shell");
+            File.WriteAllText(Path.Combine(runtimeRoot, "WeChatPlus.Core.dll"), "core");
+            File.WriteAllText(Path.Combine(dataRoot, "accounts.json"), "PRIVATE ACCOUNT CONTENT");
+            File.WriteAllText(Path.Combine(dataRoot, "quick_replies.json"), "PRIVATE REPLY CONTENT");
+
+            TrialLicenseService licenseService = new TrialLicenseService(dataRoot);
+            licenseService.ApplyActivation("SECRET-LICENSE-KEY-9999", "professional", DateTime.UtcNow.AddDays(365));
+            DiagnosticsLogService diagnostics = new DiagnosticsLogService(dataRoot);
+            diagnostics.Write("helper", "start failed", new InvalidOperationException("missing helper"));
+
+            DiagnosticsPackageResult result = DiagnosticsPackageService.Create(
+                dataRoot,
+                runtimeRoot,
+                packageRoot,
+                ReleasePackageManifest.CreateDefault());
+
+            string report = File.ReadAllText(result.ReportPath);
+            string copiedLog = File.ReadAllText(Path.Combine(packageRoot, "diagnostics.log"));
+
+            AssertTrue(result.Created, "diagnostics package created");
+            AssertTrue(File.Exists(result.ReportPath), "diagnostics report exists");
+            AssertTrue(File.Exists(Path.Combine(packageRoot, "diagnostics.log")), "diagnostics package log exists");
+            AssertContains(report, "WeChat Plus Support Report", "diagnostics report title");
+            AssertContains(report, "运行包缺少", "diagnostics package validation");
+            AssertContains(report, "professional", "diagnostics license plan");
+            AssertContains(report, "SEC...9999", "diagnostics masked license");
+            AssertContains(report, "diagnostics.log", "diagnostics report log path");
+            AssertContains(copiedLog, "missing helper", "diagnostics copied log");
+            AssertTrue(report.IndexOf("SECRET-LICENSE-KEY-9999", StringComparison.Ordinal) < 0, "diagnostics hides raw key");
+            AssertTrue(report.IndexOf("PRIVATE ACCOUNT CONTENT", StringComparison.Ordinal) < 0, "diagnostics hides accounts content");
+            AssertTrue(report.IndexOf("PRIVATE REPLY CONTENT", StringComparison.Ordinal) < 0, "diagnostics hides replies content");
         }
 
         private static void BuildsSettingsSummary()
