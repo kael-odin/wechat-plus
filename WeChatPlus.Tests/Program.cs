@@ -28,7 +28,9 @@ namespace WeChatPlus.Tests
                 Run("marks missing account processes offline", MarksMissingAccountProcessesOffline);
                 Run("reorders account records", ReordersAccountRecords);
                 Run("formats fallback workspace focus status", FormatsFallbackWorkspaceFocusStatus);
+                Run("defines release package manifest", DefinesReleasePackageManifest);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
+                Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
@@ -260,6 +262,20 @@ namespace WeChatPlus.Tests
             AssertContains(unavailable, "聚焦：未执行", "unavailable focus result");
         }
 
+        private static void DefinesReleasePackageManifest()
+        {
+            ReleasePackageManifest manifest = ReleasePackageManifest.CreateDefault();
+
+            AssertEqual("WeChat Plus MVP runtime package", manifest.Name, "release manifest name");
+            AssertTrue(manifest.Files.Length >= 5, "release file count");
+            AssertPackageFile(manifest, "WeChatPlus.Shell.exe", "ClosedSourceShell");
+            AssertPackageFile(manifest, "WeChatPlus.Core.dll", "NeutralCore");
+            AssertPackageFile(manifest, "WeChatPlus.OpenHelper.exe", "OpenHelper");
+            AssertPackageFile(manifest, "LICENSE", "OpenSourceLicense");
+            AssertPackageFile(manifest, "README.md", "RuntimeGuide");
+            AssertPackageFile(manifest, "components.json", "OpenSourceNotice");
+        }
+
         private static void BuildsLicenseActivationRequest()
         {
             string root = CreateTempRoot();
@@ -287,6 +303,22 @@ namespace WeChatPlus.Tests
             AssertEqual("WeChatPlus.OpenHelper", components[0].Name, "component name");
             AssertEqual("GPLv3", components[0].License, "component license");
             AssertContains(components[0].SourceUrl, "huiyadanli/RevokeMsgPatcher", "component source");
+        }
+
+        private static void CopiesPackagedOpenSourceComponentDeclarations()
+        {
+            string dataRoot = CreateTempRoot();
+            string packageRoot = CreateTempRoot();
+            string packageJson = "[{\"id\":\"packaged-helper\",\"name\":\"Packaged Helper\",\"version\":\"1.0\",\"license\":\"GPLv3\",\"sourceUrl\":\"https://example.test/helper\",\"binaryPath\":\"helper.exe\",\"sha256\":\"abc\",\"installedAtUtc\":\"2026-06-26T00:00:00Z\"}]";
+            File.WriteAllText(Path.Combine(packageRoot, "components.json"), packageJson);
+
+            ComponentRepository repository = new ComponentRepository(dataRoot, packageRoot);
+            OpenSourceComponent[] components = repository.GetAll();
+
+            AssertEqual("1", components.Length.ToString(), "packaged component count");
+            AssertEqual("packaged-helper", components[0].Id, "packaged component id");
+            AssertEqual("Packaged Helper", components[0].Name, "packaged component name");
+            AssertEqual("abc", components[0].Sha256, "packaged component sha");
         }
 
         private static void UpdatesQuickRepliesById()
@@ -381,6 +413,20 @@ namespace WeChatPlus.Tests
             }
 
             throw new InvalidOperationException("Missing account " + id);
+        }
+
+        private static void AssertPackageFile(ReleasePackageManifest manifest, string path, string role)
+        {
+            for (int i = 0; i < manifest.Files.Length; i++)
+            {
+                if (string.Equals(manifest.Files[i].Path, path, StringComparison.OrdinalIgnoreCase))
+                {
+                    AssertEqual(role, manifest.Files[i].Role, "release file role " + path);
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("Missing release package file " + path);
         }
 
         private static void AssertEqual(string expected, string actual, string message)

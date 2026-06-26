@@ -1,0 +1,12 @@
+[
+  {
+    "id": "wechat-plus-open-helper",
+    "name": "WeChatPlus.OpenHelper",
+    "version": "0.1.0",
+    "license": "GPLv3",
+    "sourceUrl": "https://github.com/huiyadanli/RevokeMsgPatcher",
+    "binaryPath": "WeChatPlus.OpenHelper.exe",
+    "sha256": "",
+    "installedAtUtc": "2026-06-26T00:00:00Z"
+  }
+]

@@ -7,6 +7,7 @@
 
 - `docs/product/commercial-shell-prd.md`：商用工作台 PRD。
 - `docs/product/closed-source-commercial-plan.md`：闭源商用计划书。
+- `docs/product/release-package-manifest.md`：MVP 运行包清单和 GPL 边界说明。
 - `docs/superpowers/plans/2026-06-26-wechat-plus-mvp.md`：MVP 实施计划。
 - `WeChatPlus.sln`：新的 MVP 解决方案。
 - `WeChatPlus.Core`：中立核心模型、助手命令契约、本地话术库、账号持久化、试用授权状态、授权 API 请求构造、开源组件声明数据。
@@ -55,7 +56,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 开源组件声明：默认记录 `WeChatPlus.OpenHelper`、GPLv3 许可证和上游源码地址，并在商用壳内展示。
 - 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance focus --handle <hWnd>`、`multi-instance close --pid <pid>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
 - 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭选中微信进程、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口。
-- 构建输出：商用壳会把独立助手组件复制到自身输出目录，便于进程边界调用。
+- 构建输出：商用壳会把独立助手组件、中立 Core、GPLv3 `LICENSE`、`README.md` 和 `components.json` 复制到自身输出目录，形成最小 MVP 运行包。
 - 测试：命令解析、JSON 输出、助手窗口 JSON 解析、工作区聚焦状态文案、话术种子/搜索、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除/排序/离线同步、开源组件声明、试用/本地激活授权状态。
 
 下一步：

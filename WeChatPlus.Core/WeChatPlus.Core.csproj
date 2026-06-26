@@ -47,6 +47,8 @@
     <Compile Include="Models\LicenseState.cs" />
     <Compile Include="Models\OpenSourceComponent.cs" />
     <Compile Include="Models\QuickReply.cs" />
+    <Compile Include="Models\ReleasePackageFile.cs" />
+    <Compile Include="Models\ReleasePackageManifest.cs" />
     <Compile Include="Models\ReplyCategory.cs" />
     <Compile Include="Services\AccountRepository.cs" />
     <Compile Include="Services\AppPaths.cs" />

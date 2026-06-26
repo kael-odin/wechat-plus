@@ -8,12 +8,19 @@ namespace WeChatPlus.Core.Services
     public sealed class ComponentRepository
     {
         private readonly string _dataRoot;
+        private readonly string _packageRoot;
         private readonly string _componentsPath;
         private readonly JavaScriptSerializer _serializer;
 
         public ComponentRepository(string dataRoot)
+            : this(dataRoot, AppDomain.CurrentDomain.BaseDirectory)
+        {
+        }
+
+        public ComponentRepository(string dataRoot, string packageRoot)
         {
             _dataRoot = dataRoot;
+            _packageRoot = packageRoot ?? string.Empty;
             _componentsPath = Path.Combine(_dataRoot, "components.json");
             _serializer = new JavaScriptSerializer();
         }
@@ -35,6 +42,13 @@ namespace WeChatPlus.Core.Services
             AppPaths.EnsureDirectory(_dataRoot);
             if (File.Exists(_componentsPath))
             {
+                return;
+            }
+
+            string packagedComponentsPath = Path.Combine(_packageRoot, "components.json");
+            if (File.Exists(packagedComponentsPath))
+            {
+                File.Copy(packagedComponentsPath, _componentsPath, true);
                 return;
             }
 

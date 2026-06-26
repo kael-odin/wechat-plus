@@ -44,6 +44,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="components.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\WeChatPlus.Core\WeChatPlus.Core.csproj">
       <Project>{8C7C0BB8-869D-4C0E-A1CE-5D18BA752B77}</Project>
       <Name>WeChatPlus.Core</Name>
@@ -53,5 +58,8 @@
   <Target Name="AfterBuild">
     <Copy SourceFiles="..\WeChatPlus.OpenHelper\bin\$(Configuration)\WeChatPlus.OpenHelper.exe" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\WeChatPlus.OpenHelper\bin\$(Configuration)\WeChatPlus.OpenHelper.exe')" />
     <Copy SourceFiles="..\WeChatPlus.Core\bin\$(Configuration)\WeChatPlus.Core.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\WeChatPlus.Core\bin\$(Configuration)\WeChatPlus.Core.dll')" />
+    <Copy SourceFiles="..\LICENSE" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\LICENSE')" />
+    <Copy SourceFiles="..\README.md" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\README.md')" />
+    <Copy SourceFiles="components.json" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('components.json')" />
   </Target>
 </Project>
