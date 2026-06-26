@@ -1007,17 +1007,20 @@ namespace WeChatPlus.Shell
             try
             {
                 string manifestPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update-manifest.json");
-                if (!File.Exists(manifestPath))
+                UpdateManifestResult manifestResult = UpdateManifestService.Load(
+                    "https://example.invalid/wechat-plus/update-manifest.json",
+                    manifestPath,
+                    new HttpUpdateManifestTransport());
+                if (!manifestResult.Loaded)
                 {
-                    _workspaceStatus.Text = "更新检查已预留：未找到本地 update-manifest.json，后续可接入云端版本接口。";
+                    _workspaceStatus.Text = manifestResult.Message;
                     return;
                 }
 
-                string json = File.ReadAllText(manifestPath);
-                UpdateManifest manifest = UpdateManifest.Parse(json);
+                UpdateManifest manifest = manifestResult.Manifest;
                 UpdateCheckStatus status = UpdateCheckService.Evaluate(manifest, "0.1.0", GetHelperVersion());
                 HelperIntegrityStatus helperIntegrity = HelperIntegrityVerifier.Verify(_helperPath, manifest);
-                string statusText = status.StatusText + Environment.NewLine + helperIntegrity.StatusText;
+                string statusText = manifestResult.Message + Environment.NewLine + status.StatusText + Environment.NewLine + helperIntegrity.StatusText;
                 _workspaceStatus.Text = statusText;
                 MessageBox.Show(statusText, "检查更新");
             }

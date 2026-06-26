@@ -58,6 +58,8 @@ namespace WeChatPlus.Tests
                 Run("keeps license state when cloud activation fails", KeepsLicenseStateWhenCloudActivationFails);
                 Run("activates license through cloud transport", ActivatesLicenseThroughCloudTransport);
                 Run("keeps license state when cloud transport fails", KeepsLicenseStateWhenCloudTransportFails);
+                Run("loads cloud update manifest through transport", LoadsCloudUpdateManifestThroughTransport);
+                Run("falls back to local update manifest when cloud fails", FallsBackToLocalUpdateManifestWhenCloudFails);
                 Run("parses update manifest and formats status", ParsesUpdateManifestAndFormatsStatus);
                 Run("verifies helper sha256 from update manifest", VerifiesHelperSha256FromUpdateManifest);
                 Console.WriteLine("All tests passed: " + _passed);
@@ -762,6 +764,44 @@ namespace WeChatPlus.Tests
             AssertEqual(local.LicenseKeyMasked, persisted.LicenseKeyMasked, "transport failure persisted key");
         }
 
+        private static void LoadsCloudUpdateManifestThroughTransport()
+        {
+            string localPath = Path.Combine(CreateTempRoot(), "update-manifest.json");
+            File.WriteAllText(localPath, "{\"productVersion\":\"0.1.0\",\"helperVersion\":\"0.1.0\"}");
+            FakeUpdateManifestTransport transport = new FakeUpdateManifestTransport(
+                "{\"productVersion\":\"0.3.0\",\"helperVersion\":\"0.2.0\",\"downloadUrl\":\"https://example.test/download\",\"releaseNotes\":\"cloud release\"}");
+
+            UpdateManifestResult result = UpdateManifestService.Load(
+                "https://updates.example.test/manifest.json",
+                localPath,
+                transport);
+
+            AssertTrue(result.Loaded, "cloud update manifest loaded");
+            AssertEqual("cloud", result.Source, "cloud update manifest source");
+            AssertEqual("0.3.0", result.Manifest.ProductVersion, "cloud product version");
+            AssertEqual("0.2.0", result.Manifest.HelperVersion, "cloud helper version");
+            AssertEqual("https://updates.example.test/manifest.json", transport.LastUrl, "cloud manifest url");
+        }
+
+        private static void FallsBackToLocalUpdateManifestWhenCloudFails()
+        {
+            string localPath = Path.Combine(CreateTempRoot(), "update-manifest.json");
+            File.WriteAllText(localPath, "{\"productVersion\":\"0.2.0\",\"helperVersion\":\"0.1.1\",\"releaseNotes\":\"local fallback\"}");
+            FakeUpdateManifestTransport transport = new FakeUpdateManifestTransport(null);
+            transport.Error = new InvalidOperationException("network unavailable");
+
+            UpdateManifestResult result = UpdateManifestService.Load(
+                "https://updates.example.test/manifest.json",
+                localPath,
+                transport);
+
+            AssertTrue(result.Loaded, "fallback update manifest loaded");
+            AssertEqual("local-fallback", result.Source, "fallback update manifest source");
+            AssertContains(result.Message, "network unavailable", "fallback update manifest message");
+            AssertEqual("0.2.0", result.Manifest.ProductVersion, "fallback product version");
+            AssertEqual("local fallback", result.Manifest.ReleaseNotes, "fallback release notes");
+        }
+
         private static void ParsesUpdateManifestAndFormatsStatus()
         {
             string json = "{\"productVersion\":\"0.2.0\",\"helperVersion\":\"0.1.1\",\"downloadUrl\":\"https://example.test/wechat-plus.zip\",\"helperSha256\":\"abc123\",\"releaseNotes\":\"新增窗口嵌入降级提示\"}";
@@ -1139,6 +1179,31 @@ namespace WeChatPlus.Tests
                 }
 
                 return _responseJson;
+            }
+        }
+
+        private sealed class FakeUpdateManifestTransport : IUpdateManifestTransport
+        {
+            private readonly string _manifestJson;
+
+            public FakeUpdateManifestTransport(string manifestJson)
+            {
+                _manifestJson = manifestJson;
+            }
+
+            public Exception Error { get; set; }
+
+            public string LastUrl { get; private set; }
+
+            public string DownloadString(string url)
+            {
+                LastUrl = url;
+                if (Error != null)
+                {
+                    throw Error;
+                }
+
+                return _manifestJson;
             }
         }
     }

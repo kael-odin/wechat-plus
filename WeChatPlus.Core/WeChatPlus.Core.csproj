@@ -69,6 +69,7 @@
     <Compile Include="Models\UninstallResult.cs" />
     <Compile Include="Models\UpdateCheckStatus.cs" />
     <Compile Include="Models\UpdateManifest.cs" />
+    <Compile Include="Models\UpdateManifestResult.cs" />
     <Compile Include="Services\AccountRepository.cs" />
     <Compile Include="Services\AppPaths.cs" />
     <Compile Include="Services\ComponentRepository.cs" />
@@ -76,11 +77,13 @@
     <Compile Include="Services\DiagnosticsPackageService.cs" />
     <Compile Include="Services\HelperProcessClient.cs" />
     <Compile Include="Services\HelperIntegrityVerifier.cs" />
+    <Compile Include="Services\HttpUpdateManifestTransport.cs" />
     <Compile Include="Services\InstallPlanner.cs" />
     <Compile Include="Services\InstallRegistryService.cs" />
     <Compile Include="Services\InstallService.cs" />
     <Compile Include="Services\HttpLicenseActivationTransport.cs" />
     <Compile Include="Services\ILicenseActivationTransport.cs" />
+    <Compile Include="Services\IUpdateManifestTransport.cs" />
     <Compile Include="Services\LicenseActivationResult.cs" />
     <Compile Include="Services\LicenseActivationRequest.cs" />
     <Compile Include="Services\LicenseActivationService.cs" />
@@ -95,6 +98,7 @@
     <Compile Include="Services\UninstallPlanner.cs" />
     <Compile Include="Services\UninstallService.cs" />
     <Compile Include="Services\UpdateCheckService.cs" />
+    <Compile Include="Services\UpdateManifestService.cs" />
     <Compile Include="Services\WorkspaceStatusFormatter.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
