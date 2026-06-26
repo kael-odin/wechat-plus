@@ -513,7 +513,7 @@ namespace WeChatPlus.Shell
                     if (!_privacyLockService.TryUnlock(pin.Text))
                     {
                         _workspaceStatus.Text = "隐私锁 PIN 错误，会话区域仍隐藏。";
-                        MessageBox.Show("PIN 错误。默认初始 PIN 为 1234，请在正式授权系统接入后修改为用户自定义凭据。", "隐私锁");
+                        MessageBox.Show("PIN 错误，请输入你设置的隐私锁 PIN。", "隐私锁");
                         ApplyPrivacyLockVisualState();
                         return;
                     }
@@ -524,9 +524,69 @@ namespace WeChatPlus.Shell
                 }
             }
 
+            if (_privacyLockService.IsUsingDefaultPin() && !PromptChangePrivacyPin())
+            {
+                _workspaceStatus.Text = "隐私锁未启用：请先设置自定义 PIN。";
+                return;
+            }
+
             _privacyLockService.Lock();
             _workspaceStatus.Text = "隐私锁已启用：会话区域已隐藏。";
             ApplyPrivacyLockVisualState();
+        }
+
+        private bool PromptChangePrivacyPin()
+        {
+            using (Form dialog = new Form())
+            {
+                dialog.Text = "设置隐私锁 PIN";
+                dialog.Size = new Size(380, 210);
+                dialog.StartPosition = FormStartPosition.CenterParent;
+
+                Label prompt = new Label();
+                prompt.Text = "首次启用隐私锁前，请设置自定义 PIN。";
+                prompt.Location = new Point(16, 18);
+                prompt.Size = new Size(330, 20);
+                dialog.Controls.Add(prompt);
+
+                TextBox pin = new TextBox();
+                pin.Location = new Point(16, 52);
+                pin.Size = new Size(320, 23);
+                pin.PasswordChar = '*';
+                dialog.Controls.Add(pin);
+
+                TextBox confirm = new TextBox();
+                confirm.Location = new Point(16, 86);
+                confirm.Size = new Size(320, 23);
+                confirm.PasswordChar = '*';
+                dialog.Controls.Add(confirm);
+
+                Button save = new Button();
+                save.Text = "保存";
+                save.Location = new Point(246, 122);
+                save.DialogResult = DialogResult.OK;
+                dialog.Controls.Add(save);
+                dialog.AcceptButton = save;
+
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(pin.Text) || pin.Text != confirm.Text)
+                {
+                    MessageBox.Show("两次输入的 PIN 不一致，或 PIN 为空。", "隐私锁");
+                    return false;
+                }
+
+                if (!_privacyLockService.ChangePin(PrivacyLockService.DefaultPin, pin.Text))
+                {
+                    MessageBox.Show("隐私锁 PIN 设置失败，请稍后重试。", "隐私锁");
+                    return false;
+                }
+
+                return true;
+            }
         }
 
         private void SplitWindowClicked(object sender, EventArgs e)

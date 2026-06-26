@@ -65,6 +65,31 @@ namespace WeChatPlus.Core.Services
             return true;
         }
 
+        public bool ChangePin(string currentPin, string newPin)
+        {
+            if (string.IsNullOrWhiteSpace(newPin))
+            {
+                return false;
+            }
+
+            PrivacyLockState state = GetOrCreate();
+            if (!string.Equals(state.PinHash, HashPin(currentPin), StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            state.PinHash = HashPin(newPin);
+            state.UpdatedAtUtc = DateTime.UtcNow;
+            Save(state);
+            return true;
+        }
+
+        public bool IsUsingDefaultPin()
+        {
+            PrivacyLockState state = GetOrCreate();
+            return string.Equals(state.PinHash, HashPin(DefaultPin), StringComparison.OrdinalIgnoreCase);
+        }
+
         private void Save(PrivacyLockState state)
         {
             AppPaths.EnsureDirectory(_dataRoot);

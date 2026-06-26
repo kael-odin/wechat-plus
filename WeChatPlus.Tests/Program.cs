@@ -50,6 +50,7 @@ namespace WeChatPlus.Tests
                 Run("builds settings summary", BuildsSettingsSummary);
                 Run("formats runtime environment checks", FormatsRuntimeEnvironmentChecks);
                 Run("persists privacy lock state", PersistsPrivacyLockState);
+                Run("changes privacy lock pin", ChangesPrivacyLockPin);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
                 Run("enforces trial feature limits", EnforcesTrialFeatureLimits);
@@ -1007,6 +1008,22 @@ namespace WeChatPlus.Tests
             AssertTrue(service.GetOrCreate().IsLocked, "bad pin persisted locked");
             AssertTrue(service.TryUnlock(PrivacyLockService.DefaultPin), "default pin unlocks");
             AssertTrue(!service.GetOrCreate().IsLocked, "unlock persisted");
+        }
+
+        private static void ChangesPrivacyLockPin()
+        {
+            string root = CreateTempRoot();
+            PrivacyLockService service = new PrivacyLockService(root);
+
+            AssertTrue(service.IsUsingDefaultPin(), "starts with default pin");
+            AssertTrue(service.ChangePin(PrivacyLockService.DefaultPin, "778899"), "pin change succeeds");
+            AssertTrue(!service.IsUsingDefaultPin(), "custom pin is not default");
+
+            service.Lock();
+            AssertTrue(!service.TryUnlock(PrivacyLockService.DefaultPin), "old pin no longer unlocks");
+            AssertTrue(service.TryUnlock("778899"), "new pin unlocks");
+            AssertTrue(!service.ChangePin("wrong", "112233"), "wrong current pin rejects change");
+            AssertTrue(!service.ChangePin("778899", "   "), "blank new pin rejects change");
         }
 
         private static void UpdatesQuickRepliesById()
