@@ -6,6 +6,7 @@ namespace WeChatPlus.Core.Services
     public static class LicenseFeaturePolicy
     {
         public const int TrialAccountLimit = 2;
+        public const int TrialReplyLimit = 50;
 
         public static bool CanAddAccount(LicenseState state, int currentAccountCount)
         {
@@ -30,6 +31,21 @@ namespace WeChatPlus.Core.Services
             }
 
             return !IsTrial(state);
+        }
+
+        public static bool CanCreateReply(LicenseState state, int currentReplyCount)
+        {
+            if (!IsActive(state))
+            {
+                return false;
+            }
+
+            if (IsTrial(state))
+            {
+                return currentReplyCount < TrialReplyLimit;
+            }
+
+            return true;
         }
 
         public static string GetAccountLimitMessage(LicenseState state)
@@ -57,6 +73,21 @@ namespace WeChatPlus.Core.Services
             if (IsTrial(state))
             {
                 return "试用版不支持导入或导出话术库，请激活会员后使用。";
+            }
+
+            return string.Empty;
+        }
+
+        public static string GetReplyLimitMessage(LicenseState state)
+        {
+            if (!IsActive(state))
+            {
+                return "授权已过期，请激活会员后继续新增话术。";
+            }
+
+            if (IsTrial(state))
+            {
+                return "试用版最多可保存 " + TrialReplyLimit + " 条话术，请激活会员后继续新增。";
             }
 
             return string.Empty;

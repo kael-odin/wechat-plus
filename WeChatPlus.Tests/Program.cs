@@ -246,13 +246,18 @@ namespace WeChatPlus.Tests
 
             AssertTrue(LicenseFeaturePolicy.CanAddAccount(trial, 1), "trial can add second account");
             AssertTrue(!LicenseFeaturePolicy.CanAddAccount(trial, 2), "trial blocks third account");
+            AssertTrue(LicenseFeaturePolicy.CanCreateReply(trial, 49), "trial can create fiftieth reply");
+            AssertTrue(!LicenseFeaturePolicy.CanCreateReply(trial, 50), "trial blocks fifty first reply");
             AssertTrue(!LicenseFeaturePolicy.CanImportOrExportReplies(trial), "trial blocks import export");
             AssertTrue(LicenseFeaturePolicy.CanAddAccount(personal, 12), "personal can add account");
+            AssertTrue(LicenseFeaturePolicy.CanCreateReply(personal, 500), "personal can create reply");
             AssertTrue(LicenseFeaturePolicy.CanImportOrExportReplies(personal), "personal import export");
             AssertContains(LicenseFeaturePolicy.GetAccountLimitMessage(trial), "试用版最多可管理 2 个微信账号", "trial limit message");
+            AssertContains(LicenseFeaturePolicy.GetReplyLimitMessage(trial), "试用版最多可保存 50 条话术", "trial reply limit message");
 
             personal.ExpiresAtUtc = DateTime.UtcNow.AddDays(-1);
             AssertTrue(!LicenseFeaturePolicy.CanAddAccount(personal, 0), "expired personal blocks account");
+            AssertTrue(!LicenseFeaturePolicy.CanCreateReply(personal, 0), "expired personal blocks reply");
             AssertTrue(!LicenseFeaturePolicy.CanImportOrExportReplies(personal), "expired personal blocks import export");
         }
 

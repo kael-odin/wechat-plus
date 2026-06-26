@@ -695,6 +695,18 @@ namespace WeChatPlus.Shell
         {
             ReplyListItem editingItem = _replyList.SelectedItem as ReplyListItem;
             QuickReply editing = editingItem == null ? null : editingItem.Reply;
+            if (editing == null)
+            {
+                LicenseState state = _licenseService.GetOrCreateTrial();
+                int replyCount = _replyRepository.GetAllReplies().Length;
+                if (!LicenseFeaturePolicy.CanCreateReply(state, replyCount))
+                {
+                    string message = LicenseFeaturePolicy.GetReplyLimitMessage(state);
+                    _workspaceStatus.Text = message;
+                    MessageBox.Show(message, "话术限制");
+                    return;
+                }
+            }
 
             using (Form editor = new Form())
             {
