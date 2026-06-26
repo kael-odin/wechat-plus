@@ -54,6 +54,8 @@ namespace WeChatPlus.Tests
                 Run("builds license activation request", BuildsLicenseActivationRequest);
                 Run("applies cloud license activation response", AppliesCloudLicenseActivationResponse);
                 Run("keeps license state when cloud activation fails", KeepsLicenseStateWhenCloudActivationFails);
+                Run("activates license through cloud transport", ActivatesLicenseThroughCloudTransport);
+                Run("keeps license state when cloud transport fails", KeepsLicenseStateWhenCloudTransportFails);
                 Run("parses update manifest and formats status", ParsesUpdateManifestAndFormatsStatus);
                 Run("verifies helper sha256 from update manifest", VerifiesHelperSha256FromUpdateManifest);
                 Console.WriteLine("All tests passed: " + _passed);
@@ -711,6 +713,53 @@ namespace WeChatPlus.Tests
             AssertEqual(local.LicenseKeyMasked, persisted.LicenseKeyMasked, "failed cloud persisted key");
         }
 
+        private static void ActivatesLicenseThroughCloudTransport()
+        {
+            string root = CreateTempRoot();
+            TrialLicenseService licenseService = new TrialLicenseService(root);
+            LicenseApiClient apiClient = new LicenseApiClient("https://license.example.test/api");
+            FakeLicenseActivationTransport transport = new FakeLicenseActivationTransport(
+                "{\"ok\":true,\"licenseKeyMasked\":\"CLOUD...8888\",\"plan\":\"professional\",\"expiresAtUtc\":\"2031-03-04T05:06:07Z\",\"offlineGraceUntilUtc\":\"2031-04-04T05:06:07Z\",\"message\":\"activated\"}");
+            LicenseActivationService activationService = new LicenseActivationService(licenseService, apiClient, transport);
+
+            LicenseActivationResult result = activationService.Activate("CLOUD-KEY-8888");
+
+            AssertTrue(result.Success, "cloud activation result success");
+            AssertEqual("activated", result.Message, "cloud activation result message");
+            AssertEqual("professional", result.State.Plan, "cloud activation result plan");
+            AssertEqual("CLOUD...8888", result.State.LicenseKeyMasked, "cloud activation result masked key");
+            AssertEqual("https://license.example.test/api/licenses/activate", transport.LastRequest.Url, "cloud activation request url");
+            AssertContains(transport.LastRequest.BodyJson, "\"licenseKey\":\"CLOUD-KEY-8888\"", "cloud activation request key");
+
+            TrialLicenseService reloaded = new TrialLicenseService(root);
+            LicenseState persisted = reloaded.GetOrCreateTrial();
+            AssertEqual("professional", persisted.Plan, "cloud activation persisted plan");
+            AssertEqual("CLOUD...8888", persisted.LicenseKeyMasked, "cloud activation persisted key");
+        }
+
+        private static void KeepsLicenseStateWhenCloudTransportFails()
+        {
+            string root = CreateTempRoot();
+            TrialLicenseService licenseService = new TrialLicenseService(root);
+            LicenseState local = licenseService.ApplyActivation("LOCAL-123-SECRET", "personal", DateTime.UtcNow.AddDays(365));
+            LicenseApiClient apiClient = new LicenseApiClient("https://license.example.test/api");
+            FakeLicenseActivationTransport transport = new FakeLicenseActivationTransport(null);
+            transport.Error = new InvalidOperationException("network unavailable");
+            LicenseActivationService activationService = new LicenseActivationService(licenseService, apiClient, transport);
+
+            LicenseActivationResult result = activationService.Activate("CLOUD-KEY-FAIL");
+
+            AssertTrue(!result.Success, "transport failure result");
+            AssertContains(result.Message, "network unavailable", "transport failure message");
+            AssertEqual(local.Plan, result.State.Plan, "transport failure keeps plan");
+            AssertEqual(local.LicenseKeyMasked, result.State.LicenseKeyMasked, "transport failure keeps key");
+
+            TrialLicenseService reloaded = new TrialLicenseService(root);
+            LicenseState persisted = reloaded.GetOrCreateTrial();
+            AssertEqual(local.Plan, persisted.Plan, "transport failure persisted plan");
+            AssertEqual(local.LicenseKeyMasked, persisted.LicenseKeyMasked, "transport failure persisted key");
+        }
+
         private static void ParsesUpdateManifestAndFormatsStatus()
         {
             string json = "{\"productVersion\":\"0.2.0\",\"helperVersion\":\"0.1.1\",\"downloadUrl\":\"https://example.test/wechat-plus.zip\",\"helperSha256\":\"abc123\",\"releaseNotes\":\"新增窗口嵌入降级提示\"}";
@@ -1014,6 +1063,31 @@ namespace WeChatPlus.Tests
             if (value == null || value.IndexOf(expectedSubstring, StringComparison.Ordinal) < 0)
             {
                 throw new InvalidOperationException(message + ": missing '" + expectedSubstring + "' in '" + value + "'");
+            }
+        }
+
+        private sealed class FakeLicenseActivationTransport : ILicenseActivationTransport
+        {
+            private readonly string _responseJson;
+
+            public FakeLicenseActivationTransport(string responseJson)
+            {
+                _responseJson = responseJson;
+            }
+
+            public Exception Error { get; set; }
+
+            public LicenseActivationRequest LastRequest { get; private set; }
+
+            public string Send(LicenseActivationRequest request)
+            {
+                LastRequest = request;
+                if (Error != null)
+                {
+                    throw Error;
+                }
+
+                return _responseJson;
             }
         }
     }

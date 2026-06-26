@@ -77,7 +77,11 @@
     <Compile Include="Services\InstallPlanner.cs" />
     <Compile Include="Services\InstallRegistryService.cs" />
     <Compile Include="Services\InstallService.cs" />
+    <Compile Include="Services\HttpLicenseActivationTransport.cs" />
+    <Compile Include="Services\ILicenseActivationTransport.cs" />
+    <Compile Include="Services\LicenseActivationResult.cs" />
     <Compile Include="Services\LicenseActivationRequest.cs" />
+    <Compile Include="Services\LicenseActivationService.cs" />
     <Compile Include="Services\LicenseApiClient.cs" />
     <Compile Include="Services\LicenseFeaturePolicy.cs" />
     <Compile Include="Services\PrivacyLockService.cs" />
