@@ -441,11 +441,20 @@ namespace WeChatPlus.Tests
             AssertTrue(File.Exists(Path.Combine(installRoot, "WeChatPlus.Shell.exe")), "install copied shell");
             AssertTrue(File.Exists(Path.Combine(installRoot, "WeChatPlus.OpenHelper.exe")), "install copied helper");
             AssertTrue(File.Exists(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "install created shortcut");
-            AssertContains(File.ReadAllText(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "WeChatPlus.Shell.exe", "install shortcut target");
+            AssertEqual(Path.Combine(startMenuRoot, "WeChat Plus.lnk"), result.ShortcutPath, "install shortcut result path");
+            AssertTrue(result.ShortcutMode == "windows-shell-link" || result.ShortcutMode == "fallback-target-file", "install shortcut mode");
+            if (result.ShortcutMode == "windows-shell-link")
+            {
+                AssertTrue(File.ReadAllText(Path.Combine(startMenuRoot, "WeChat Plus.lnk")) != plan.ShortcutTargetPath, "install shortcut is not placeholder text");
+            }
+            else
+            {
+                AssertContains(File.ReadAllText(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "WeChatPlus.Shell.exe", "install shortcut fallback target");
+            }
             AssertTrue(result.WroteRegistration, "install wrote registration");
             AssertTrue(File.Exists(Path.Combine(installRoot, "install-registration.json")), "install registration file");
             AssertContains(File.ReadAllText(Path.Combine(installRoot, "install-registration.json")), "UninstallString", "install registration uninstall json");
-            AssertContains(result.SummaryText, "installed", "install summary");
+            AssertContains(result.SummaryText, result.ShortcutMode, "install summary shortcut mode");
         }
 
         private static void CreatesUninstallPlan()

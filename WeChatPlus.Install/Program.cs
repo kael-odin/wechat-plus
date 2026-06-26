@@ -37,6 +37,8 @@ namespace WeChatPlus.Install
                     output.Message = result.SummaryText;
                     output.Data["copiedFiles"] = result.CopiedFiles;
                     output.Data["createdShortcut"] = result.CreatedShortcut;
+                    output.Data["shortcutPath"] = result.ShortcutPath;
+                    output.Data["shortcutMode"] = result.ShortcutMode;
                     output.Data["wroteRegistration"] = result.WroteRegistration;
                     output.Data["registrationPath"] = result.RegistrationPath;
                     output.Data["errors"] = result.Errors;

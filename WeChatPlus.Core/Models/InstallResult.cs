@@ -8,6 +8,10 @@ namespace WeChatPlus.Core.Models
 
         public bool CreatedShortcut { get; set; }
 
+        public string ShortcutPath { get; set; }
+
+        public string ShortcutMode { get; set; }
+
         public bool WroteRegistration { get; set; }
 
         public string RegistrationPath { get; set; }

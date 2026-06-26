@@ -12,7 +12,9 @@ namespace WeChatPlus.Core.Services
         {
             ArrayList errors = new ArrayList();
             int copied = CopyFiles(plan == null ? null : plan.FileCopies, errors);
-            bool shortcut = CreateShortcutPlaceholder(plan, errors);
+            string shortcutPath;
+            string shortcutMode;
+            bool shortcut = CreateShortcut(plan, errors, out shortcutPath, out shortcutMode);
             string registrationPath;
             bool registration = WriteRegistration(plan, errors, out registrationPath);
 
@@ -20,6 +22,8 @@ namespace WeChatPlus.Core.Services
             result.Ok = errors.Count == 0;
             result.CopiedFiles = copied;
             result.CreatedShortcut = shortcut;
+            result.ShortcutPath = shortcutPath;
+            result.ShortcutMode = shortcutMode;
             result.WroteRegistration = registration;
             result.RegistrationPath = registrationPath;
             result.Errors = ToStringArray(errors);
@@ -63,13 +67,16 @@ namespace WeChatPlus.Core.Services
             return copied;
         }
 
-        private static bool CreateShortcutPlaceholder(InstallPlan plan, ArrayList errors)
+        private static bool CreateShortcut(InstallPlan plan, ArrayList errors, out string shortcutPath, out string shortcutMode)
         {
+            shortcutPath = string.Empty;
+            shortcutMode = "not-created";
             if (plan == null || string.IsNullOrEmpty(plan.ShortcutPath))
             {
                 return false;
             }
 
+            shortcutPath = plan.ShortcutPath;
             try
             {
                 string directory = Path.GetDirectoryName(plan.ShortcutPath);
@@ -78,13 +85,67 @@ namespace WeChatPlus.Core.Services
                     Directory.CreateDirectory(directory);
                 }
 
+                if (TryCreateWindowsShellLink(plan))
+                {
+                    shortcutMode = "windows-shell-link";
+                    return true;
+                }
+
                 File.WriteAllText(plan.ShortcutPath, plan.ShortcutTargetPath ?? string.Empty);
+                shortcutMode = "fallback-target-file";
                 return true;
             }
             catch (Exception ex)
             {
                 errors.Add(plan.ShortcutPath + ": " + ex.Message);
                 return false;
+            }
+        }
+
+        private static bool TryCreateWindowsShellLink(InstallPlan plan)
+        {
+            object shell = null;
+            object shortcut = null;
+
+            try
+            {
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                if (shellType == null)
+                {
+                    return false;
+                }
+
+                shell = Activator.CreateInstance(shellType);
+                shortcut = shellType.InvokeMember(
+                    "CreateShortcut",
+                    System.Reflection.BindingFlags.InvokeMethod,
+                    null,
+                    shell,
+                    new object[] { plan.ShortcutPath });
+
+                Type shortcutType = shortcut.GetType();
+                shortcutType.InvokeMember("TargetPath", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { plan.ShortcutTargetPath ?? string.Empty });
+                shortcutType.InvokeMember("WorkingDirectory", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { plan.InstallDirectory ?? string.Empty });
+                shortcutType.InvokeMember("Description", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { plan.ProductName ?? string.Empty });
+                shortcutType.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, shortcut, new object[0]);
+                return File.Exists(plan.ShortcutPath);
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                ReleaseComObject(shortcut);
+                ReleaseComObject(shell);
+            }
+        }
+
+        private static void ReleaseComObject(object value)
+        {
+            if (value != null && System.Runtime.InteropServices.Marshal.IsComObject(value))
+            {
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(value);
             }
         }
 
@@ -128,7 +189,7 @@ namespace WeChatPlus.Core.Services
 
         private static string BuildSummary(InstallResult result)
         {
-            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? "created" : "not created") + "; registration " + (result.WroteRegistration ? "written" : "not written");
+            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? result.ShortcutMode : "not created") + "; registration " + (result.WroteRegistration ? "written" : "not written");
         }
     }
 }
