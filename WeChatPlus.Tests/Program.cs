@@ -25,6 +25,7 @@ namespace WeChatPlus.Tests
                 Run("persists account records", PersistsAccountRecords);
                 Run("renames and deletes account records", RenamesAndDeletesAccountRecords);
                 Run("preserves account remarks on process refresh", PreservesAccountRemarksOnProcessRefresh);
+                Run("reorders account records", ReordersAccountRecords);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
@@ -186,6 +187,28 @@ namespace WeChatPlus.Tests
 
             AccountRecord[] accounts = repository.GetAll();
             AssertEqual("售前客服", accounts[0].DisplayName, "remark after refresh");
+        }
+
+        private static void ReordersAccountRecords()
+        {
+            string root = CreateTempRoot();
+            AccountRepository repository = new AccountRepository(root);
+            AccountRecord first = repository.UpsertFromProcess(5001, "一号", "Ready");
+            AccountRecord second = repository.UpsertFromProcess(5002, "二号", "Ready");
+            AccountRecord third = repository.UpsertFromProcess(5003, "三号", "Ready");
+
+            bool movedUp = repository.MoveAccount(third.Id, -1);
+            bool movedDown = repository.MoveAccount(first.Id, 1);
+
+            AccountRepository reloaded = new AccountRepository(root);
+            AccountRecord[] accounts = reloaded.GetAll();
+
+            AssertTrue(movedUp, "move up result");
+            AssertTrue(movedDown, "move down result");
+            AssertEqual(third.Id, accounts[0].Id, "first after reorder");
+            AssertEqual(first.Id, accounts[1].Id, "second after reorder");
+            AssertEqual(second.Id, accounts[2].Id, "third after reorder");
+            AssertTrue(!reloaded.MoveAccount(second.Id, 1), "move last down result");
         }
 
         private static void BuildsLicenseActivationRequest()

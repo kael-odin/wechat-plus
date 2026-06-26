@@ -158,9 +158,17 @@ namespace WeChatPlus.Shell
             deleteButton.Click += DeleteAccountClicked;
             rail.Controls.Add(deleteButton);
 
+            Button moveUpButton = RailButton("上", "上移", 388);
+            moveUpButton.Click += MoveAccountUpClicked;
+            rail.Controls.Add(moveUpButton);
+
+            Button moveDownButton = RailButton("下", "下移", 462);
+            moveDownButton.Click += MoveAccountDownClicked;
+            rail.Controls.Add(moveDownButton);
+
             _accountList = new ListBox();
-            _accountList.Location = new Point(8, 388);
-            _accountList.Size = new Size(76, 220);
+            _accountList.Location = new Point(8, 536);
+            _accountList.Size = new Size(76, 96);
             _accountList.BorderStyle = BorderStyle.None;
             _accountList.SelectedIndexChanged += AccountSelectionChanged;
             rail.Controls.Add(_accountList);
@@ -849,6 +857,36 @@ namespace WeChatPlus.Shell
             _accountRepository.Delete(item.Account.Id);
             RefreshAccounts();
             _workspaceStatus.Text = "本地账号记录已删除：" + item.Account.DisplayName;
+        }
+
+        private void MoveAccountUpClicked(object sender, EventArgs e)
+        {
+            MoveSelectedAccount(-1);
+        }
+
+        private void MoveAccountDownClicked(object sender, EventArgs e)
+        {
+            MoveSelectedAccount(1);
+        }
+
+        private void MoveSelectedAccount(int direction)
+        {
+            AccountListItem item = _accountList.SelectedItem as AccountListItem;
+            if (item == null)
+            {
+                _workspaceStatus.Text = "请先选择要排序的账号。";
+                return;
+            }
+
+            if (_accountRepository.MoveAccount(item.Account.Id, direction))
+            {
+                RefreshAccounts();
+                SelectAccount(item.Account.Id);
+                _workspaceStatus.Text = direction < 0 ? "账号已上移：" + item.Account.DisplayName : "账号已下移：" + item.Account.DisplayName;
+                return;
+            }
+
+            _workspaceStatus.Text = "账号已经在边界位置：" + item.Account.DisplayName;
         }
 
         private void AccountSelectionChanged(object sender, EventArgs e)

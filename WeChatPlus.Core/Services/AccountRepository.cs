@@ -119,12 +119,55 @@ namespace WeChatPlus.Core.Services
             AccountRecord[] remaining = GetAll()
                 .Where(x => !string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase))
                 .ToArray();
-            Save(remaining);
+            Save(NormalizeSortOrder(remaining));
+        }
+
+        public bool MoveAccount(string id, int direction)
+        {
+            if (string.IsNullOrEmpty(id) || direction == 0)
+            {
+                return false;
+            }
+
+            List<AccountRecord> accounts = new List<AccountRecord>(GetAll());
+            int index = accounts.FindIndex(x => string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+            {
+                return false;
+            }
+
+            int target = direction < 0 ? index - 1 : index + 1;
+            if (target < 0 || target >= accounts.Count)
+            {
+                return false;
+            }
+
+            AccountRecord current = accounts[index];
+            accounts[index] = accounts[target];
+            accounts[target] = current;
+            Save(NormalizeSortOrder(accounts.ToArray()));
+            return true;
         }
 
         private void Save(AccountRecord[] accounts)
         {
             File.WriteAllText(_accountsPath, _serializer.Serialize(accounts ?? new AccountRecord[0]));
+        }
+
+        private static AccountRecord[] NormalizeSortOrder(AccountRecord[] accounts)
+        {
+            if (accounts == null)
+            {
+                return new AccountRecord[0];
+            }
+
+            for (int i = 0; i < accounts.Length; i++)
+            {
+                accounts[i].SortOrder = i + 1;
+                accounts[i].UpdatedAtUtc = DateTime.UtcNow;
+            }
+
+            return accounts;
         }
 
         private static bool IsGeneratedDisplayName(string displayName)
