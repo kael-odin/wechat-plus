@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Security.Principal;
 using System.Windows.Forms;
 using WeChatPlus.Core.Contracts;
 using WeChatPlus.Core.Models;
@@ -54,6 +55,7 @@ namespace WeChatPlus.Shell
             InitializeComponent();
             LoadData();
             RefreshHelperStatus();
+            RefreshRuntimeEnvironmentStatus();
         }
 
         private void InitializeComponent()
@@ -889,6 +891,7 @@ namespace WeChatPlus.Shell
         {
             SettingsSummary summary = SettingsSummaryService.Create(_dataRoot, AppDomain.CurrentDomain.BaseDirectory);
             ReleasePackageValidationResult package = ReleasePackageValidator.Validate(summary.RuntimeRoot, ReleasePackageManifest.CreateDefault());
+            RuntimeEnvironmentCheck environment = GetRuntimeEnvironmentCheck();
             using (Form dialog = new Form())
             {
                 dialog.Text = "设置";
@@ -912,6 +915,9 @@ namespace WeChatPlus.Shell
                 details.ScrollBars = ScrollBars.Both;
                 details.WordWrap = false;
                 details.Text =
+                    "运行环境检查：" + Environment.NewLine +
+                    environment.SummaryText + Environment.NewLine +
+                    Environment.NewLine +
                     "运行包校验：" + package.SummaryText + Environment.NewLine +
                     FormatMissingPackageFiles(package) + Environment.NewLine +
                     Environment.NewLine +
@@ -1059,22 +1065,53 @@ namespace WeChatPlus.Shell
                 return;
             }
 
-            if (!File.Exists(_helperPath))
-            {
-                _processStatus.Text = "微信进程：助手组件未找到";
-                return;
-            }
-
             try
             {
-                HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
-                string json = client.Run("multi-instance status");
-                _processStatus.Text = "微信进程状态：" + TrimForStatus(json);
+                RuntimeEnvironmentCheck check = GetRuntimeEnvironmentCheck();
+                _processStatus.Text = check.SummaryText.Replace(Environment.NewLine, " | ");
             }
             catch (Exception ex)
             {
                 LogDiagnostic("helper.process-status", "Refresh WeChat process status failed.", ex);
                 _processStatus.Text = "微信进程状态：刷新失败 " + ex.Message;
+            }
+        }
+
+        private void RefreshRuntimeEnvironmentStatus()
+        {
+            RefreshWeChatProcessStatus();
+        }
+
+        private RuntimeEnvironmentCheck GetRuntimeEnvironmentCheck()
+        {
+            bool helperAvailable = File.Exists(_helperPath);
+            HelperRuntimeStatus helperStatus = new HelperRuntimeStatus();
+            helperStatus.HelperOk = helperAvailable;
+
+            if (helperAvailable)
+            {
+                try
+                {
+                    HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
+                    helperStatus = HelperRuntimeStatusParser.Parse(client.Run("multi-instance status"));
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic("runtime.environment", "Runtime environment check failed.", ex);
+                    helperStatus.HelperOk = false;
+                    helperStatus.Message = ex.Message;
+                }
+            }
+
+            return RuntimeEnvironmentChecker.Create(IsRunningAsAdministrator(), helperAvailable, helperStatus);
+        }
+
+        private static bool IsRunningAsAdministrator()
+        {
+            using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+            {
+                WindowsPrincipal principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
         }
 

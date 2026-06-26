@@ -40,6 +40,8 @@
     <Compile Include="Contracts\HelperCommand.cs" />
     <Compile Include="Contracts\HelperCommandParser.cs" />
     <Compile Include="Contracts\HelperCommandResult.cs" />
+    <Compile Include="Contracts\HelperRuntimeStatus.cs" />
+    <Compile Include="Contracts\HelperRuntimeStatusParser.cs" />
     <Compile Include="Contracts\HelperVersionResultParser.cs" />
     <Compile Include="Contracts\HelperWindowInfo.cs" />
     <Compile Include="Contracts\HelperWindowResultParser.cs" />
@@ -53,6 +55,7 @@
     <Compile Include="Models\ReleasePackageManifest.cs" />
     <Compile Include="Models\ReleasePackageValidationResult.cs" />
     <Compile Include="Models\ReplyCategory.cs" />
+    <Compile Include="Models\RuntimeEnvironmentCheck.cs" />
     <Compile Include="Models\SettingsSummary.cs" />
     <Compile Include="Models\UpdateCheckStatus.cs" />
     <Compile Include="Models\UpdateManifest.cs" />
@@ -67,6 +70,7 @@
     <Compile Include="Services\PrivacyLockService.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
     <Compile Include="Services\ReleasePackageValidator.cs" />
+    <Compile Include="Services\RuntimeEnvironmentChecker.cs" />
     <Compile Include="Services\SettingsSummaryService.cs" />
     <Compile Include="Services\TrialLicenseService.cs" />
     <Compile Include="Services\UpdateCheckService.cs" />

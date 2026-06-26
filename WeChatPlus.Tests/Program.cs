@@ -17,6 +17,7 @@ namespace WeChatPlus.Tests
                 Run("parses helper commands", ParsesHelperCommands);
                 Run("serializes helper result", SerializesHelperResult);
                 Run("parses helper version result", ParsesHelperVersionResult);
+                Run("parses helper runtime status result", ParsesHelperRuntimeStatusResult);
                 Run("parses helper window results", ParsesHelperWindowResults);
                 Run("seeds and searches quick replies", SeedsAndSearchesQuickReplies);
                 Run("returns shortcut quick replies", ReturnsShortcutQuickReplies);
@@ -36,6 +37,7 @@ namespace WeChatPlus.Tests
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
                 Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
                 Run("builds settings summary", BuildsSettingsSummary);
+                Run("formats runtime environment checks", FormatsRuntimeEnvironmentChecks);
                 Run("persists privacy lock state", PersistsPrivacyLockState);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
@@ -113,6 +115,23 @@ namespace WeChatPlus.Tests
 
             AssertEqual("0.1.0", version, "helper version");
             AssertEqual("", HelperVersionResultParser.ParseVersion("{\"ok\":false}"), "missing helper version");
+        }
+
+        private static void ParsesHelperRuntimeStatusResult()
+        {
+            string json = "{\"ok\":true,\"command\":\"multi-instance status\",\"message\":\"\",\"data\":{\"processCount\":2,\"installPath\":\"C:\\\\Program Files\\\\Tencent\\\\WeChat\"}}";
+
+            HelperRuntimeStatus status = HelperRuntimeStatusParser.Parse(json);
+
+            AssertTrue(status.HelperOk, "runtime helper ok");
+            AssertEqual("multi-instance status", status.Command, "runtime command");
+            AssertTrue(status.ProcessCount == 2, "runtime process count");
+            AssertEqual("C:\\Program Files\\Tencent\\WeChat", status.InstallPath, "runtime install path");
+
+            HelperRuntimeStatus failed = HelperRuntimeStatusParser.Parse("{\"ok\":false,\"command\":\"multi-instance status\",\"message\":\"denied\"}");
+
+            AssertTrue(!failed.HelperOk, "runtime helper not ok");
+            AssertEqual("denied", failed.Message, "runtime helper message");
         }
 
         private static void ParsesHelperWindowResults()
@@ -482,6 +501,29 @@ namespace WeChatPlus.Tests
             AssertContains(summary.QuickRepliesPath, "quick_replies.json", "settings replies path");
             AssertContains(summary.LicenseStatePath, "license_state.json", "settings license path");
             AssertContains(summary.PrivacyLockPath, "privacy_lock.json", "settings privacy path");
+        }
+
+        private static void FormatsRuntimeEnvironmentChecks()
+        {
+            HelperRuntimeStatus helper = new HelperRuntimeStatus();
+            helper.HelperOk = true;
+            helper.ProcessCount = 1;
+            helper.InstallPath = "C:\\Program Files\\Tencent\\WeChat";
+
+            RuntimeEnvironmentCheck complete = RuntimeEnvironmentChecker.Create(true, true, helper);
+
+            AssertTrue(complete.IsReady, "environment ready");
+            AssertContains(complete.SummaryText, "管理员权限：已启用", "administrator summary");
+            AssertContains(complete.SummaryText, "微信安装路径：C:\\Program Files\\Tencent\\WeChat", "wechat path summary");
+            AssertContains(complete.SummaryText, "微信进程：1", "wechat process summary");
+
+            HelperRuntimeStatus missingPath = new HelperRuntimeStatus();
+            missingPath.HelperOk = true;
+            RuntimeEnvironmentCheck incomplete = RuntimeEnvironmentChecker.Create(false, true, missingPath);
+
+            AssertTrue(!incomplete.IsReady, "environment not ready");
+            AssertContains(incomplete.SummaryText, "管理员权限：未启用", "missing admin summary");
+            AssertContains(incomplete.SummaryText, "微信安装路径：未检测到", "missing path summary");
         }
 
         private static void PersistsPrivacyLockState()
