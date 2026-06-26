@@ -1,4 +1,69 @@
 
+# WeChat Plus 商用工作台
+
+本仓库当前在上游 `huiyadanli/RevokeMsgPatcher` v2.1 基础上新增了 WeChat Plus MVP 开发骨架，用于实现“闭源商用主程序 + 独立开源助手组件”的微信多开工作台。原上游 GPLv3 项目内容保留在下方，新的商用工作台代码放在独立的 `WeChatPlus.sln` 中，避免和原补丁工具混在一个可执行程序里。
+
+## 当前新增内容
+
+- `docs/product/commercial-shell-prd.md`：商用工作台 PRD。
+- `docs/product/closed-source-commercial-plan.md`：闭源商用计划书。
+- `docs/superpowers/plans/2026-06-26-wechat-plus-mvp.md`：MVP 实施计划。
+- `WeChatPlus.sln`：新的 MVP 解决方案。
+- `WeChatPlus.Core`：中立核心模型、助手命令契约、本地话术库、试用授权状态。
+- `WeChatPlus.OpenHelper`：独立开源助手组件命令行原型，输出 JSON。
+- `WeChatPlus.Shell`：闭源商用壳原型，三栏 WinForms 工作台 UI。
+- `WeChatPlus.Tests`：无第三方依赖的控制台测试。
+
+## 架构边界
+
+WeChat Plus 的商业化边界按以下方式设计：
+
+- 闭源商用壳只引用 `WeChatPlus.Core` 中新写的中立模型和服务。
+- 多开、补丁等 GPL 敏感能力放在 `WeChatPlus.OpenHelper` 独立可执行文件中。
+- 商用壳通过进程边界调用助手组件，不复制、不链接 GPLv3 源码。
+- 如果后续把 RevokeMsgPatcher 的 GPLv3 多开/补丁实现迁入助手组件，助手组件对应修改源码必须公开，并在产品内展示许可证和源码地址。
+
+当前 `WeChatPlus.OpenHelper` 已提供 JSON CLI 边界和安全的状态/版本命令；`multi-instance start` 会尝试启动本机微信，`close-mutex` 已保留独立助手命令入口，等待后续在开源助手仓库中接入 GPL 合规实现。
+
+## 构建与验证
+
+当前环境没有 `dotnet` SDK 或 Visual Studio MSBuild，已验证可使用系统 .NET Framework MSBuild 构建新的 MVP 解决方案：
+
+```powershell
+& 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\MSBuild.exe' WeChatPlus.sln /p:Configuration=Debug /p:Platform='Any CPU' /v:minimal
+.\WeChatPlus.Tests\bin\Debug\WeChatPlus.Tests.exe
+.\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe version --json
+.\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe multi-instance status
+```
+
+运行商用壳：
+
+```powershell
+.\WeChatPlus.Shell\bin\Debug\WeChatPlus.Shell.exe
+```
+
+注意：直接构建原始 `RevokeMsgPatcher.sln` 在当前机器上会因为缺少对应 Targeting Pack、NuGet 包和旧 MSBuild 编译能力出现错误；新的 MVP 工作集中在 `WeChatPlus.sln`。
+
+## MVP 状态
+
+已完成：
+
+- 三栏工作台 UI：账号栏、微信工作区占位、右侧快捷话术栏、顶部会员/开源声明入口、底部截图入口。
+- 本地话术库：默认分类、默认话术、搜索、新增、复制、JSON 导入导出、CSV 导入。
+- 试用授权状态：设备哈希、试用期、离线宽限期。
+- 助手组件：`version --json`、`multi-instance status`、`patch status --app wechat`。
+- 构建输出：商用壳会把独立助手组件复制到自身输出目录，便于进程边界调用。
+- 测试：命令解析、JSON 输出、话术种子/搜索、JSON/CSV 导入、试用授权状态。
+
+下一步：
+
+- 在独立开源助手组件中接入真实微信互斥句柄关闭逻辑，并公开对应源码。
+- 为商用壳增加微信窗口枚举、聚焦和嵌入/降级聚焦模式。
+- 接入真实截图流程。
+- 增加授权 API 客户端和安装器。
+
+---
+
 <p align="center">
 	<a><img width="100px" src="https://raw.githubusercontent.com/huiyadanli/RevokeMsgPatcher/master/Images/logo.png"/></a>
 </p>
