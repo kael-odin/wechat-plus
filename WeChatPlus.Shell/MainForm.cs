@@ -30,6 +30,7 @@ namespace WeChatPlus.Shell
         private Label _workspaceStatus;
         private Label _privacyLockOverlay;
         private Label _processStatus;
+        private Panel _workspaceCanvas;
         private CheckBox _hideForScreenshot;
         private TableLayoutPanel _mainLayout;
         private Control _rightPanel;
@@ -157,7 +158,7 @@ namespace WeChatPlus.Shell
             rail.Controls.Add(lockButton);
 
             Button splitButton = RailButton("拆", "拆分窗口", 166);
-            splitButton.Click += delegate { _workspaceStatus.Text = "拆分窗口将在窗口嵌入能力完成后启用。"; };
+            splitButton.Click += SplitWindowClicked;
             rail.Controls.Add(splitButton);
 
             Button renameButton = RailButton("备", "备注", 240);
@@ -209,7 +210,9 @@ namespace WeChatPlus.Shell
             canvas.Dock = DockStyle.Fill;
             canvas.BackColor = Color.White;
             canvas.BorderStyle = BorderStyle.FixedSingle;
+            canvas.Resize += WorkspaceCanvasResized;
             workspace.Controls.Add(canvas);
+            _workspaceCanvas = canvas;
 
             _processStatus = new Label();
             _processStatus.Text = "微信进程：未刷新";
@@ -507,6 +510,42 @@ namespace WeChatPlus.Shell
             _privacyLockService.Lock();
             _workspaceStatus.Text = "隐私锁已启用：会话区域已隐藏。";
             ApplyPrivacyLockVisualState();
+        }
+
+        private void SplitWindowClicked(object sender, EventArgs e)
+        {
+            AccountListItem item = _accountList.SelectedItem as AccountListItem;
+            if (item == null)
+            {
+                _workspaceStatus.Text = "请先选择要拆分的微信账号。";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(item.Account.WindowHandle))
+            {
+                _workspaceStatus.Text = "当前账号没有可拆分的微信窗口。";
+                return;
+            }
+
+            if (!File.Exists(_helperPath))
+            {
+                MessageBox.Show("未找到助手组件，无法拆分微信窗口。", "拆分窗口");
+                return;
+            }
+
+            try
+            {
+                HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
+                string output = client.Run("multi-instance detach --handle " + item.Account.WindowHandle);
+                _workspaceStatus.Text = ExtractBool(output, "detached")
+                    ? "已将微信窗口拆分回独立窗口：" + item.Account.DisplayName
+                    : "拆分窗口未生效，已保持当前模式：" + TrimForStatus(output);
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic("helper.detach", "Detach WeChat window failed.", ex);
+                MessageBox.Show("拆分微信窗口失败：" + ex.Message, "拆分窗口");
+            }
         }
 
         private void ReplyDoubleClicked(object sender, EventArgs e)
@@ -1135,6 +1174,11 @@ namespace WeChatPlus.Shell
             {
                 try
                 {
+                    if (TryEmbedSelectedWindow(item))
+                    {
+                        return;
+                    }
+
                     HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
                     string output = client.Run("multi-instance focus --handle " + item.Account.WindowHandle);
                     _workspaceStatus.Text = WorkspaceStatusFormatter.FormatFocusMode(item.Account, ExtractBool(output, "focused") ? "成功" : "失败", output);
@@ -1149,6 +1193,50 @@ namespace WeChatPlus.Shell
             }
 
             _workspaceStatus.Text = WorkspaceStatusFormatter.FormatFocusMode(item.Account, false, string.Empty);
+        }
+
+        private void WorkspaceCanvasResized(object sender, EventArgs e)
+        {
+            AccountListItem item = _accountList == null ? null : _accountList.SelectedItem as AccountListItem;
+            if (item == null || !File.Exists(_helperPath) || string.IsNullOrWhiteSpace(item.Account.WindowHandle))
+            {
+                return;
+            }
+
+            try
+            {
+                TryEmbedSelectedWindow(item);
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic("helper.embed-resize", "Resize embedded WeChat window failed.", ex);
+            }
+        }
+
+        private bool TryEmbedSelectedWindow(AccountListItem item)
+        {
+            if (_workspaceCanvas == null || item == null || string.IsNullOrWhiteSpace(item.Account.WindowHandle))
+            {
+                return false;
+            }
+
+            HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
+            string command = "multi-instance embed --handle " + item.Account.WindowHandle +
+                " --parent " + _workspaceCanvas.Handle.ToInt64() +
+                " --width " + Math.Max(100, _workspaceCanvas.ClientSize.Width) +
+                " --height " + Math.Max(100, _workspaceCanvas.ClientSize.Height);
+            string output = client.Run(command);
+            bool embedded = ExtractBool(output, "embedded");
+            if (embedded)
+            {
+                _workspaceStatus.Text = "已嵌入微信窗口：" + item.Account.DisplayName + Environment.NewLine +
+                    "PID：" + item.Account.ProcessId + Environment.NewLine +
+                    "窗口句柄：" + item.Account.WindowHandle;
+                return true;
+            }
+
+            LogDiagnostic("helper.embed", "Embed returned focus fallback: " + TrimForStatus(output), null);
+            return false;
         }
 
         private void SelectAccount(string id)

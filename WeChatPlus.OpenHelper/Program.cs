@@ -130,6 +130,48 @@ namespace WeChatPlus.OpenHelper
                 return result;
             }
 
+            if (string.Equals(command.Action, "embed", StringComparison.OrdinalIgnoreCase))
+            {
+                long handleValue;
+                long parentValue;
+                int width;
+                int height;
+                if (!long.TryParse(command.GetOption("handle"), out handleValue))
+                {
+                    return HelperCommandResult.Failure("multi-instance embed", "Missing or invalid --handle.");
+                }
+                if (!long.TryParse(command.GetOption("parent"), out parentValue))
+                {
+                    return HelperCommandResult.Failure("multi-instance embed", "Missing or invalid --parent.");
+                }
+                int.TryParse(command.GetOption("width"), out width);
+                int.TryParse(command.GetOption("height"), out height);
+
+                bool embedded = WeChatService.EmbedWindow(new IntPtr(handleValue), new IntPtr(parentValue), width, height);
+                HelperCommandResult result = HelperCommandResult.Success("multi-instance embed");
+                result.Data["embedded"] = embedded;
+                result.Data["windowHandle"] = handleValue.ToString();
+                result.Data["parentHandle"] = parentValue.ToString();
+                result.Data["mode"] = embedded ? "embedded" : "focus-fallback";
+                return result;
+            }
+
+            if (string.Equals(command.Action, "detach", StringComparison.OrdinalIgnoreCase))
+            {
+                long handleValue;
+                if (!long.TryParse(command.GetOption("handle"), out handleValue))
+                {
+                    return HelperCommandResult.Failure("multi-instance detach", "Missing or invalid --handle.");
+                }
+
+                bool detached = WeChatService.DetachWindow(new IntPtr(handleValue));
+                HelperCommandResult result = HelperCommandResult.Success("multi-instance detach");
+                result.Data["detached"] = detached;
+                result.Data["windowHandle"] = handleValue.ToString();
+                result.Data["mode"] = detached ? "detached" : "unchanged";
+                return result;
+            }
+
             if (string.Equals(command.Action, "close-all", StringComparison.OrdinalIgnoreCase))
             {
                 int closed = WeChatService.CloseAllProcesses();

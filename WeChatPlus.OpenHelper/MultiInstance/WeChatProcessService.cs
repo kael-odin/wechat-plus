@@ -10,6 +10,15 @@ namespace WeChatPlus.OpenHelper.MultiInstance
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool IsWindow(IntPtr hWnd);
+
         public int CountProcesses()
         {
             return Process.GetProcessesByName("WeChat").Length;
@@ -130,6 +139,38 @@ namespace WeChatPlus.OpenHelper.MultiInstance
                 return false;
             }
             return SetForegroundWindow(windowHandle);
+        }
+
+        public bool EmbedWindow(IntPtr windowHandle, IntPtr parentHandle, int width, int height)
+        {
+            if (!IsWindow(windowHandle) || !IsWindow(parentHandle))
+            {
+                return false;
+            }
+
+            IntPtr previousParent = SetParent(windowHandle, parentHandle);
+            if (previousParent == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            int targetWidth = width <= 0 ? 800 : width;
+            int targetHeight = height <= 0 ? 600 : height;
+            MoveWindow(windowHandle, 0, 0, targetWidth, targetHeight, true);
+            SetForegroundWindow(windowHandle);
+            return true;
+        }
+
+        public bool DetachWindow(IntPtr windowHandle)
+        {
+            if (!IsWindow(windowHandle))
+            {
+                return false;
+            }
+
+            SetParent(windowHandle, IntPtr.Zero);
+            SetForegroundWindow(windowHandle);
+            return true;
         }
 
         private static string ReadInstallPath(RegistryKey key)

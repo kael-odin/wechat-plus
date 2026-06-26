@@ -77,6 +77,17 @@ namespace WeChatPlus.Tests
             AssertEqual("multi-instance", closeProcess.Area, "close process area");
             AssertEqual("close", closeProcess.Action, "close process action");
             AssertEqual("5678", closeProcess.GetOption("pid"), "close process pid option");
+
+            HelperCommand embed = HelperCommandParser.Parse(new[] { "multi-instance", "embed", "--handle", "100", "--parent", "200" });
+            AssertEqual("multi-instance", embed.Area, "embed area");
+            AssertEqual("embed", embed.Action, "embed action");
+            AssertEqual("100", embed.GetOption("handle"), "embed handle option");
+            AssertEqual("200", embed.GetOption("parent"), "embed parent option");
+
+            HelperCommand detach = HelperCommandParser.Parse(new[] { "multi-instance", "detach", "--handle", "100" });
+            AssertEqual("multi-instance", detach.Area, "detach area");
+            AssertEqual("detach", detach.Action, "detach action");
+            AssertEqual("100", detach.GetOption("handle"), "detach handle option");
         }
 
         private static void SerializesHelperResult()

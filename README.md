@@ -25,7 +25,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 商用壳通过进程边界调用助手组件，不复制、不链接 GPLv3 源码。
 - 如果后续把 RevokeMsgPatcher 的 GPLv3 多开/补丁实现迁入助手组件，助手组件对应修改源码必须公开，并在产品内展示许可证和源码地址。
 
-当前 `WeChatPlus.OpenHelper` 已提供 JSON CLI 边界和多开助手命令；`multi-instance start` 会先尝试关闭已有微信实例互斥句柄再启动本机微信，`windows` 可枚举微信进程主窗口，`focus`、`close`、`close-all`、`close-mutex` 和 `close-all-mutex` 都在独立助手组件内执行。
+当前 `WeChatPlus.OpenHelper` 已提供 JSON CLI 边界和多开助手命令；`multi-instance start` 会先尝试关闭已有微信实例互斥句柄再启动本机微信，`windows` 可枚举微信进程主窗口，`embed`/`detach` 可尝试把微信窗口嵌入或拆回独立窗口，`focus`、`close`、`close-all`、`close-mutex` 和 `close-all-mutex` 都在独立助手组件内执行。
 
 ## 构建与验证
 
@@ -52,13 +52,13 @@ WeChat Plus 的商业化边界按以下方式设计：
 
 已完成：
 
-- 三栏工作台 UI：账号栏、微信工作区非嵌入聚焦模式、右侧快捷话术栏、顶部会员/开源声明入口、左侧隐私锁、底部截图入口。
+- 三栏工作台 UI：账号栏、微信工作区嵌入优先模式（失败时自动降级为聚焦模式）、右侧快捷话术栏、顶部会员/开源声明入口、左侧隐私锁、底部截图入口。
 - 本地话术库：默认分类、默认话术、搜索、新增/编辑/删除、点击复制、JSON 导入导出、CSV 导入。
 - 本地账号管理：账号记录保存到 `accounts.json`，支持备注编辑、删除本地记录、账号排序，启动/刷新微信窗口后更新账号状态，检测不到的旧进程会自动标记离线，选中已检测窗口时通过助手组件请求聚焦并在中间区展示账号、PID、窗口句柄和聚焦结果。
 - 隐私锁：锁定状态保存到 `privacy_lock.json`，启用后隐藏会话承载区和进程状态，输入 PIN 后恢复显示；当前 MVP 初始 PIN 为 `1234`，后续应接入用户自定义凭据或系统认证。
 - 试用/会员授权状态：设备哈希、试用期、离线宽限期、本地激活码状态、云端激活请求构造；试用版限制最多管理 2 个微信账号并禁用话术导入导出；不硬编码真实密钥。
 - 开源组件声明：默认记录 `WeChatPlus.OpenHelper`、GPLv3 许可证和上游源码地址，并在商用壳内展示。
-- 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance focus --handle <hWnd>`、`multi-instance close --pid <pid>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
+- 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance embed --handle <hWnd> --parent <hWnd>`、`multi-instance detach --handle <hWnd>`、`multi-instance focus --handle <hWnd>`、`multi-instance close --pid <pid>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
 - 更新检查：商用壳可读取运行目录的 `update-manifest.json`，比较主程序和助手组件版本并展示本地更新状态；当前不联网、不包含真实更新密钥。
 - 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭选中微信进程、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口、诊断日志导出。
 - 构建输出：商用壳会把独立助手组件、中立 Core、GPLv3 `LICENSE`、`README.md`、`components.json` 和 `update-manifest.json` 复制到自身输出目录，形成最小 MVP 运行包。
@@ -66,7 +66,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 
 下一步：
 
-- 为商用壳增加真正的微信窗口嵌入能力，保留当前非嵌入聚焦模式作为降级路径。
+- 继续打磨微信窗口嵌入体验，包括窗口样式恢复、最小化/最大化同步和更多微信版本兼容性验证。
 - 接入真实授权服务端、云端更新清单和安装器。
 
 ---
