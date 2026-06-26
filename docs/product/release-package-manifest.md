@@ -27,3 +27,5 @@ This manifest describes the minimum runtime package for the WeChat Plus MVP. It 
 `ReleasePackageValidator` checks the runtime folder against this manifest and reports missing required files. The Settings page displays the validation summary and missing file list so a user can diagnose an incomplete runtime folder or a deleted helper component without crashing the closed-source shell.
 
 `HelperIntegrityVerifier` can verify `WeChatPlus.OpenHelper.exe` against `update-manifest.json` `helperSha256`. The current MVP uses the local manifest only; a commercial updater can replace it with a downloaded manifest after adding transport security and signature policy.
+
+`InstallerManifest` describes the default installer metadata without mutating the local machine: product name, publisher, default install directory under Program Files, Start Menu shortcut, uninstall command, open-helper source URL, and the runtime package files. A future MSI/EXE installer should consume this metadata and then implement actual shortcut creation, registry uninstall registration, elevation, and rollback.

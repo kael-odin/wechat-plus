@@ -32,6 +32,7 @@ namespace WeChatPlus.Tests
                 Run("reorders account records", ReordersAccountRecords);
                 Run("formats fallback workspace focus status", FormatsFallbackWorkspaceFocusStatus);
                 Run("defines release package manifest", DefinesReleasePackageManifest);
+                Run("defines installer manifest", DefinesInstallerManifest);
                 Run("validates release package files", ValidatesReleasePackageFiles);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
@@ -368,6 +369,21 @@ namespace WeChatPlus.Tests
             AssertPackageFile(manifest, "README.md", "RuntimeGuide");
             AssertPackageFile(manifest, "components.json", "OpenSourceNotice");
             AssertPackageFile(manifest, "update-manifest.json", "UpdateManifest");
+        }
+
+        private static void DefinesInstallerManifest()
+        {
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+
+            AssertEqual("WeChat Plus", manifest.ProductName, "installer product name");
+            AssertContains(manifest.DefaultInstallDirectory, "WeChat Plus", "installer default path");
+            AssertEqual("WeChat Plus", manifest.StartMenuFolder, "installer start menu folder");
+            AssertEqual("WeChat Plus.lnk", manifest.ShortcutName, "installer shortcut name");
+            AssertContains(manifest.ShortcutTarget, "WeChatPlus.Shell.exe", "installer shortcut target");
+            AssertContains(manifest.UninstallCommand, "WeChatPlus.Uninstall.exe", "installer uninstall command");
+            AssertContains(manifest.OpenHelperSourceUrl, "huiyadanli/RevokeMsgPatcher", "installer helper source url");
+            AssertTrue(manifest.Files.Length >= 7, "installer file count");
+            AssertPackageFile(manifest.RuntimePackage, "WeChatPlus.OpenHelper.exe", "OpenHelper");
         }
 
         private static void ValidatesReleasePackageFiles()

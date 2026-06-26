@@ -48,6 +48,7 @@
     <Compile Include="Contracts\JsonResultWriter.cs" />
     <Compile Include="Models\AccountRecord.cs" />
     <Compile Include="Models\HelperIntegrityStatus.cs" />
+    <Compile Include="Models\InstallerManifest.cs" />
     <Compile Include="Models\LicenseState.cs" />
     <Compile Include="Models\OpenSourceComponent.cs" />
     <Compile Include="Models\PrivacyLockState.cs" />
