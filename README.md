@@ -23,7 +23,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 商用壳通过进程边界调用助手组件，不复制、不链接 GPLv3 源码。
 - 如果后续把 RevokeMsgPatcher 的 GPLv3 多开/补丁实现迁入助手组件，助手组件对应修改源码必须公开，并在产品内展示许可证和源码地址。
 
-当前 `WeChatPlus.OpenHelper` 已提供 JSON CLI 边界和多开助手命令；`multi-instance start` 会先尝试关闭已有微信实例互斥句柄再启动本机微信，`windows` 可枚举微信进程主窗口，`focus`、`close-all`、`close-mutex` 和 `close-all-mutex` 都在独立助手组件内执行。
+当前 `WeChatPlus.OpenHelper` 已提供 JSON CLI 边界和多开助手命令；`multi-instance start` 会先尝试关闭已有微信实例互斥句柄再启动本机微信，`windows` 可枚举微信进程主窗口，`focus`、`close`、`close-all`、`close-mutex` 和 `close-all-mutex` 都在独立助手组件内执行。
 
 ## 构建与验证
 
@@ -53,8 +53,8 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 本地账号管理：账号记录保存到 `accounts.json`，支持备注编辑、删除本地记录、账号排序，启动/刷新微信窗口后更新账号状态，选中已检测窗口时通过助手组件请求聚焦。
 - 试用/会员授权状态：设备哈希、试用期、离线宽限期、本地激活码状态、云端激活请求构造；不硬编码真实密钥。
 - 开源组件声明：默认记录 `WeChatPlus.OpenHelper`、GPLv3 许可证和上游源码地址，并在商用壳内展示。
-- 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance focus --handle <hWnd>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
-- 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口。
+- 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance focus --handle <hWnd>`、`multi-instance close --pid <pid>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
+- 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭选中微信进程、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口。
 - 构建输出：商用壳会把独立助手组件复制到自身输出目录，便于进程边界调用。
 - 测试：命令解析、JSON 输出、助手窗口 JSON 解析、话术种子/搜索、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除/排序、开源组件声明、试用/本地激活授权状态。
 

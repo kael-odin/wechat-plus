@@ -99,6 +99,30 @@ namespace WeChatPlus.OpenHelper.MultiInstance
             return closed;
         }
 
+        public bool CloseProcess(int processId)
+        {
+            if (processId <= 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                Process process = Process.GetProcessById(processId);
+                if (!string.Equals(process.ProcessName, "WeChat", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                process.Kill();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public bool FocusWindow(IntPtr windowHandle)
         {
             if (windowHandle == IntPtr.Zero)

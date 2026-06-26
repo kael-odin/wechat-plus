@@ -244,6 +244,13 @@ namespace WeChatPlus.Shell
             closeAllButton.Click += CloseAllWeChatClicked;
             bottom.Controls.Add(closeAllButton);
 
+            Button closeCurrentButton = new Button();
+            closeCurrentButton.Text = "关闭当前";
+            closeCurrentButton.Size = new Size(110, 32);
+            closeCurrentButton.Location = new Point(500, 9);
+            closeCurrentButton.Click += CloseCurrentWeChatClicked;
+            bottom.Controls.Add(closeCurrentButton);
+
             _hideForScreenshot = new CheckBox();
             _hideForScreenshot.Text = "截图时隐藏当前窗口";
             _hideForScreenshot.AutoSize = true;
@@ -794,6 +801,54 @@ namespace WeChatPlus.Shell
             }
         }
 
+        private void CloseCurrentWeChatClicked(object sender, EventArgs e)
+        {
+            AccountListItem item = _accountList.SelectedItem as AccountListItem;
+            if (item == null)
+            {
+                _workspaceStatus.Text = "请先选择要关闭的微信账号。";
+                return;
+            }
+
+            if (!File.Exists(_helperPath))
+            {
+                MessageBox.Show("未找到助手组件，无法关闭当前微信。", "关闭当前");
+                return;
+            }
+
+            if (item.Account.ProcessId <= 0)
+            {
+                _workspaceStatus.Text = "当前账号没有可关闭的微信进程。";
+                return;
+            }
+
+            DialogResult result = MessageBox.Show("确认关闭“" + item.Account.DisplayName + "”对应的微信进程？", "关闭当前", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+            {
+                return;
+            }
+
+            try
+            {
+                HelperProcessClient client = new HelperProcessClient(_helperPath, 5000);
+                string output = client.Run("multi-instance close --pid " + item.Account.ProcessId);
+                bool closed = ExtractBool(output, "closed");
+                if (closed)
+                {
+                    _accountRepository.UpdateStatus(item.Account.Id, "Offline", 0, item.Account.WindowHandle);
+                    RefreshAccounts();
+                    SelectAccount(item.Account.Id);
+                }
+
+                RefreshWeChatProcessStatus();
+                _workspaceStatus.Text = closed ? "已关闭当前微信：" + TrimForStatus(output) : "未关闭当前微信：" + TrimForStatus(output);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("关闭当前微信失败：" + ex.Message, "关闭当前");
+            }
+        }
+
         private void RenameAccountClicked(object sender, EventArgs e)
         {
             AccountListItem item = _accountList.SelectedItem as AccountListItem;
@@ -943,6 +998,29 @@ namespace WeChatPlus.Shell
             string value = ExtractRawNumber(json, propertyName);
             int parsed;
             return int.TryParse(value, out parsed) ? parsed : 0;
+        }
+
+        private static bool ExtractBool(string json, string propertyName)
+        {
+            if (string.IsNullOrEmpty(json))
+            {
+                return false;
+            }
+
+            string marker = "\"" + propertyName + "\":";
+            int markerIndex = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return false;
+            }
+
+            int start = markerIndex + marker.Length;
+            if (json.Length >= start + 4 && string.Equals(json.Substring(start, 4), "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private static string ExtractRawNumber(string json, string propertyName)

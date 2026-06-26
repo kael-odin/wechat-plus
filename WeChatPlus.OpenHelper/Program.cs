@@ -138,6 +138,21 @@ namespace WeChatPlus.OpenHelper
                 return result;
             }
 
+            if (string.Equals(command.Action, "close", StringComparison.OrdinalIgnoreCase))
+            {
+                int processId;
+                if (!int.TryParse(command.GetOption("pid"), out processId))
+                {
+                    return HelperCommandResult.Failure("multi-instance close", "Missing or invalid --pid.");
+                }
+
+                bool closed = WeChatService.CloseProcess(processId);
+                HelperCommandResult result = HelperCommandResult.Success("multi-instance close");
+                result.Data["processId"] = processId;
+                result.Data["closed"] = closed;
+                return result;
+            }
+
             return HelperCommandResult.Failure("multi-instance", "Unsupported multi-instance action.");
         }
     }

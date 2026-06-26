@@ -63,6 +63,11 @@ namespace WeChatPlus.Tests
             AssertEqual("multi-instance", close.Area, "close area");
             AssertEqual("close-mutex", close.Action, "close action");
             AssertEqual("1234", close.GetOption("pid"), "pid option");
+
+            HelperCommand closeProcess = HelperCommandParser.Parse(new[] { "multi-instance", "close", "--pid", "5678" });
+            AssertEqual("multi-instance", closeProcess.Area, "close process area");
+            AssertEqual("close", closeProcess.Action, "close process action");
+            AssertEqual("5678", closeProcess.GetOption("pid"), "close process pid option");
         }
 
         private static void SerializesHelperResult()
