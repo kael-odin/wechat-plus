@@ -47,6 +47,7 @@
     <Compile Include="Contracts\HelperWindowResultParser.cs" />
     <Compile Include="Contracts\JsonResultWriter.cs" />
     <Compile Include="Models\AccountRecord.cs" />
+    <Compile Include="Models\HelperIntegrityStatus.cs" />
     <Compile Include="Models\LicenseState.cs" />
     <Compile Include="Models\OpenSourceComponent.cs" />
     <Compile Include="Models\PrivacyLockState.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="Services\ComponentRepository.cs" />
     <Compile Include="Services\DiagnosticsLogService.cs" />
     <Compile Include="Services\HelperProcessClient.cs" />
+    <Compile Include="Services\HelperIntegrityVerifier.cs" />
     <Compile Include="Services\LicenseActivationRequest.cs" />
     <Compile Include="Services\LicenseApiClient.cs" />
     <Compile Include="Services\LicenseFeaturePolicy.cs" />

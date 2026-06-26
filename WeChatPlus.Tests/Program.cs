@@ -44,6 +44,7 @@ namespace WeChatPlus.Tests
                 Run("enforces trial feature limits", EnforcesTrialFeatureLimits);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
                 Run("parses update manifest and formats status", ParsesUpdateManifestAndFormatsStatus);
+                Run("verifies helper sha256 from update manifest", VerifiesHelperSha256FromUpdateManifest);
                 Console.WriteLine("All tests passed: " + _passed);
                 return 0;
             }
@@ -435,6 +436,40 @@ namespace WeChatPlus.Tests
             AssertTrue(!latest.ProductUpdateAvailable, "latest product no update");
             AssertTrue(!latest.HelperUpdateAvailable, "latest helper no update");
             AssertContains(latest.StatusText, "已是最新版本", "latest status text");
+        }
+
+        private static void VerifiesHelperSha256FromUpdateManifest()
+        {
+            string root = CreateTempRoot();
+            string helperPath = Path.Combine(root, "WeChatPlus.OpenHelper.exe");
+            File.WriteAllText(helperPath, "abc");
+
+            UpdateManifest manifest = new UpdateManifest();
+            manifest.HelperSha256 = "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD";
+
+            HelperIntegrityStatus matched = HelperIntegrityVerifier.Verify(helperPath, manifest);
+
+            AssertTrue(matched.FileExists, "helper file exists");
+            AssertTrue(matched.HashProvided, "helper hash provided");
+            AssertTrue(matched.HashMatches, "helper hash matches");
+            AssertContains(matched.StatusText, "校验通过", "helper integrity matched text");
+
+            manifest.HelperSha256 = "000000";
+            HelperIntegrityStatus mismatch = HelperIntegrityVerifier.Verify(helperPath, manifest);
+
+            AssertTrue(!mismatch.HashMatches, "helper hash mismatch");
+            AssertContains(mismatch.StatusText, "校验失败", "helper integrity mismatch text");
+
+            manifest.HelperSha256 = string.Empty;
+            HelperIntegrityStatus skipped = HelperIntegrityVerifier.Verify(helperPath, manifest);
+
+            AssertTrue(!skipped.HashProvided, "helper hash missing");
+            AssertContains(skipped.StatusText, "未提供", "helper integrity skipped text");
+
+            HelperIntegrityStatus missing = HelperIntegrityVerifier.Verify(Path.Combine(root, "missing.exe"), manifest);
+
+            AssertTrue(!missing.FileExists, "missing helper file");
+            AssertContains(missing.StatusText, "未找到", "missing helper text");
         }
 
         private static void SeedsOpenSourceComponentDeclarations()

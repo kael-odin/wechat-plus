@@ -1016,8 +1016,10 @@ namespace WeChatPlus.Shell
                 string json = File.ReadAllText(manifestPath);
                 UpdateManifest manifest = UpdateManifest.Parse(json);
                 UpdateCheckStatus status = UpdateCheckService.Evaluate(manifest, "0.1.0", GetHelperVersion());
-                _workspaceStatus.Text = status.StatusText;
-                MessageBox.Show(status.StatusText, "检查更新");
+                HelperIntegrityStatus helperIntegrity = HelperIntegrityVerifier.Verify(_helperPath, manifest);
+                string statusText = status.StatusText + Environment.NewLine + helperIntegrity.StatusText;
+                _workspaceStatus.Text = statusText;
+                MessageBox.Show(statusText, "检查更新");
             }
             catch (Exception ex)
             {

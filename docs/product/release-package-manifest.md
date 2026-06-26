@@ -25,3 +25,5 @@ This manifest describes the minimum runtime package for the WeChat Plus MVP. It 
 `WeChatPlus.Shell.csproj` copies the helper executable, neutral core DLL, root `LICENSE`, root `README.md`, packaged `components.json`, and `update-manifest.json` into the Shell output directory after build. On first run, `ComponentRepository` copies the packaged open-source component declaration into the local data directory so users can view it from the app. The Shell can read `update-manifest.json` from the runtime folder to show product/helper update status without embedding any real update secret.
 
 `ReleasePackageValidator` checks the runtime folder against this manifest and reports missing required files. The Settings page displays the validation summary and missing file list so a user can diagnose an incomplete runtime folder or a deleted helper component without crashing the closed-source shell.
+
+`HelperIntegrityVerifier` can verify `WeChatPlus.OpenHelper.exe` against `update-manifest.json` `helperSha256`. The current MVP uses the local manifest only; a commercial updater can replace it with a downloaded manifest after adding transport security and signature policy.
