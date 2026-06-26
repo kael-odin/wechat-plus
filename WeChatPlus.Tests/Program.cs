@@ -19,7 +19,9 @@ namespace WeChatPlus.Tests
                 Run("seeds and searches quick replies", SeedsAndSearchesQuickReplies);
                 Run("imports exported quick reply json", ImportsExportedQuickReplyJson);
                 Run("imports quick reply csv", ImportsQuickReplyCsv);
+                Run("persists account records", PersistsAccountRecords);
                 Run("creates trial license state", CreatesTrialLicenseState);
+                Run("builds license activation request", BuildsLicenseActivationRequest);
                 Console.WriteLine("All tests passed: " + _passed);
                 return 0;
             }
@@ -91,6 +93,42 @@ namespace WeChatPlus.Tests
             AssertEqual("trial", state.Plan, "trial plan");
             AssertTrue(!string.IsNullOrEmpty(state.DeviceIdHash), "device hash");
             AssertTrue(state.OfflineGraceUntilUtc > DateTime.UtcNow, "offline grace");
+        }
+
+        private static void PersistsAccountRecords()
+        {
+            string root = CreateTempRoot();
+            AccountRepository repository = new AccountRepository(root);
+            AccountRecord record = repository.UpsertFromProcess(2048, "微信客服号", "Ready");
+
+            AccountRepository reloaded = new AccountRepository(root);
+            AccountRecord[] accounts = reloaded.GetAll();
+
+            AssertEqual("1", accounts.Length.ToString(), "account count");
+            AssertEqual(record.Id, accounts[0].Id, "account id");
+            AssertEqual("微信客服号", accounts[0].DisplayName, "account name");
+            AssertEqual("Ready", accounts[0].Status, "account status");
+
+            reloaded.UpdateStatus(record.Id, "Offline", 0, string.Empty);
+            AccountRecord updated = reloaded.GetAll()[0];
+            AssertEqual("Offline", updated.Status, "updated account status");
+            AssertEqual("0", updated.ProcessId.ToString(), "updated process id");
+        }
+
+        private static void BuildsLicenseActivationRequest()
+        {
+            string root = CreateTempRoot();
+            TrialLicenseService service = new TrialLicenseService(root);
+            LicenseState state = service.GetOrCreateTrial();
+            LicenseApiClient client = new LicenseApiClient("https://license.example.test/api");
+
+            LicenseActivationRequest request = client.BuildActivationRequest("ABC-123-SECRET", state);
+
+            AssertEqual("https://license.example.test/api/licenses/activate", request.Url, "activation url");
+            AssertEqual("POST", request.Method, "activation method");
+            AssertContains(request.BodyJson, "\"licenseKey\":\"ABC-123-SECRET\"", "license key body");
+            AssertContains(request.BodyJson, "\"deviceIdHash\":\"" + state.DeviceIdHash + "\"", "device hash body");
+            AssertContains(request.BodyJson, "\"product\":\"wechat-plus\"", "product body");
         }
 
         private static void ImportsExportedQuickReplyJson()

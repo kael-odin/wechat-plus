@@ -46,8 +46,11 @@
     <Compile Include="Models\OpenSourceComponent.cs" />
     <Compile Include="Models\QuickReply.cs" />
     <Compile Include="Models\ReplyCategory.cs" />
+    <Compile Include="Services\AccountRepository.cs" />
     <Compile Include="Services\AppPaths.cs" />
     <Compile Include="Services\HelperProcessClient.cs" />
+    <Compile Include="Services\LicenseActivationRequest.cs" />
+    <Compile Include="Services\LicenseApiClient.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
     <Compile Include="Services\TrialLicenseService.cs" />
   </ItemGroup>

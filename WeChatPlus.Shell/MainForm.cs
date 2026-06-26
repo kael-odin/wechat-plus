@@ -14,6 +14,8 @@ namespace WeChatPlus.Shell
         private readonly string _dataRoot;
         private readonly QuickReplyRepository _replyRepository;
         private readonly TrialLicenseService _licenseService;
+        private readonly AccountRepository _accountRepository;
+        private readonly LicenseApiClient _licenseApiClient;
         private readonly string _helperPath;
 
         private ListBox _accountList;
@@ -28,12 +30,15 @@ namespace WeChatPlus.Shell
         private Control _rightPanel;
         private bool _rightPanelCollapsed;
         private QuickReply[] _currentReplies;
+        private AccountRecord[] _currentAccounts;
 
         public MainForm()
         {
             _dataRoot = AppPaths.GetDefaultDataRoot();
             _replyRepository = new QuickReplyRepository(_dataRoot);
             _licenseService = new TrialLicenseService(_dataRoot);
+            _accountRepository = new AccountRepository(_dataRoot);
+            _licenseApiClient = new LicenseApiClient("https://license.example.invalid/api");
             _helperPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WeChatPlus.OpenHelper.exe");
 
             InitializeComponent();
@@ -146,7 +151,7 @@ namespace WeChatPlus.Shell
             _accountList.Location = new Point(8, 248);
             _accountList.Size = new Size(76, 360);
             _accountList.BorderStyle = BorderStyle.None;
-            _accountList.Items.Add("待登录");
+            _accountList.SelectedIndexChanged += AccountSelectionChanged;
             rail.Controls.Add(_accountList);
 
             return rail;
@@ -207,11 +212,18 @@ namespace WeChatPlus.Shell
             bottom.Controls.Add(screenshotButton);
 
             Button refreshButton = new Button();
-            refreshButton.Text = "刷新进程";
+            refreshButton.Text = "刷新账号";
             refreshButton.Size = new Size(110, 32);
             refreshButton.Location = new Point(260, 9);
-            refreshButton.Click += delegate { RefreshWeChatProcessStatus(); };
+            refreshButton.Click += delegate { RefreshWeChatWindows(); };
             bottom.Controls.Add(refreshButton);
+
+            Button closeAllButton = new Button();
+            closeAllButton.Text = "关闭微信";
+            closeAllButton.Size = new Size(110, 32);
+            closeAllButton.Location = new Point(380, 9);
+            closeAllButton.Click += CloseAllWeChatClicked;
+            bottom.Controls.Add(closeAllButton);
 
             _hideForScreenshot = new CheckBox();
             _hideForScreenshot.Text = "截图时隐藏当前窗口";
@@ -275,6 +287,7 @@ namespace WeChatPlus.Shell
         private void LoadData()
         {
             _replyRepository.EnsureSeedData();
+            RefreshAccounts();
 
             _categoryList.Items.Clear();
             foreach (ReplyCategory category in _replyRepository.GetCategories().OrderBy(x => x.SortOrder))
@@ -287,6 +300,27 @@ namespace WeChatPlus.Shell
             }
 
             RefreshReplies();
+        }
+
+        private void RefreshAccounts()
+        {
+            _currentAccounts = _accountRepository.GetAll();
+            if (_accountList == null)
+            {
+                return;
+            }
+
+            _accountList.Items.Clear();
+            if (_currentAccounts.Length == 0)
+            {
+                _accountList.Items.Add("待登录");
+                return;
+            }
+
+            for (int i = 0; i < _currentAccounts.Length; i++)
+            {
+                _accountList.Items.Add(new AccountListItem(_currentAccounts[i]));
+            }
         }
 
         private void RefreshReplies()
@@ -341,7 +375,9 @@ namespace WeChatPlus.Shell
                 HelperProcessClient client = new HelperProcessClient(_helperPath, 10000);
                 client.Run("multi-instance close-all-mutex");
                 string output = client.Run("multi-instance start");
-                _accountList.Items.Add("微信实例 " + DateTime.Now.ToString("HH:mm:ss"));
+                AccountRecord account = _accountRepository.UpsertFromProcess(ExtractProcessId(output), "微信实例 " + DateTime.Now.ToString("HH:mm:ss"), "Launched");
+                RefreshAccounts();
+                SelectAccount(account.Id);
                 _workspaceStatus.Text = "已调用助手组件启动微信：" + TrimForStatus(output);
                 RefreshWeChatProcessStatus();
             }
@@ -477,10 +513,13 @@ namespace WeChatPlus.Shell
         private void ShowMemberState(object sender, EventArgs e)
         {
             LicenseState state = _licenseService.GetOrCreateTrial();
+            LicenseActivationRequest request = _licenseApiClient.BuildActivationRequest("请在此输入激活码", state);
             MessageBox.Show(
                 "当前方案：" + state.Plan + Environment.NewLine +
                 "试用到期：" + state.ExpiresAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
-                "设备哈希：" + state.DeviceIdHash.Substring(0, 12) + "...",
+                "设备哈希：" + state.DeviceIdHash.Substring(0, 12) + "..." + Environment.NewLine +
+                "激活接口：" + request.Method + " " + request.Url + Environment.NewLine +
+                "说明：当前仅预留云端授权请求，不包含真实密钥。",
                 "会员状态");
         }
 
@@ -527,6 +566,162 @@ namespace WeChatPlus.Shell
             }
         }
 
+        private void RefreshWeChatWindows()
+        {
+            if (!File.Exists(_helperPath))
+            {
+                MessageBox.Show("未找到助手组件，无法刷新微信窗口。", "刷新账号");
+                return;
+            }
+
+            try
+            {
+                HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
+                string json = client.Run("multi-instance windows");
+                int processCount = ExtractInt(json, "processCount");
+                if (processCount == 0)
+                {
+                    _workspaceStatus.Text = "当前没有检测到微信窗口。";
+                    RefreshAccounts();
+                    RefreshWeChatProcessStatus();
+                    return;
+                }
+
+                AccountRecord record = _accountRepository.UpsertFromProcess(ExtractInt(json, "processId"), "微信窗口 " + DateTime.Now.ToString("HH:mm:ss"), "Detected");
+                record.WindowHandle = ExtractString(json, "windowHandle");
+                _accountRepository.UpdateStatus(record.Id, "Detected", record.ProcessId, record.WindowHandle);
+                RefreshAccounts();
+                SelectAccount(record.Id);
+                RefreshWeChatProcessStatus();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("刷新微信窗口失败：" + ex.Message, "刷新账号");
+            }
+        }
+
+        private void CloseAllWeChatClicked(object sender, EventArgs e)
+        {
+            if (!File.Exists(_helperPath))
+            {
+                MessageBox.Show("未找到助手组件，无法关闭微信。", "关闭微信");
+                return;
+            }
+
+            DialogResult result = MessageBox.Show("确认关闭所有微信进程？", "关闭微信", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+            {
+                return;
+            }
+
+            try
+            {
+                HelperProcessClient client = new HelperProcessClient(_helperPath, 5000);
+                string output = client.Run("multi-instance close-all");
+                AccountRecord[] accounts = _accountRepository.GetAll();
+                for (int i = 0; i < accounts.Length; i++)
+                {
+                    _accountRepository.UpdateStatus(accounts[i].Id, "Offline", 0, accounts[i].WindowHandle);
+                }
+                RefreshAccounts();
+                RefreshWeChatProcessStatus();
+                _workspaceStatus.Text = "已请求关闭微信：" + TrimForStatus(output);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("关闭微信失败：" + ex.Message, "关闭微信");
+            }
+        }
+
+        private void AccountSelectionChanged(object sender, EventArgs e)
+        {
+            AccountListItem item = _accountList.SelectedItem as AccountListItem;
+            if (item == null)
+            {
+                return;
+            }
+
+            _workspaceStatus.Text = "当前账号：" + item.Account.DisplayName + " / 状态：" + item.Account.Status + " / PID：" + item.Account.ProcessId;
+        }
+
+        private void SelectAccount(string id)
+        {
+            if (string.IsNullOrEmpty(id) || _accountList == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _accountList.Items.Count; i++)
+            {
+                AccountListItem item = _accountList.Items[i] as AccountListItem;
+                if (item != null && string.Equals(item.Account.Id, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    _accountList.SelectedIndex = i;
+                    return;
+                }
+            }
+        }
+
+        private static int ExtractProcessId(string helperJson)
+        {
+            return ExtractInt(helperJson, "processId");
+        }
+
+        private static int ExtractInt(string json, string propertyName)
+        {
+            string value = ExtractRawNumber(json, propertyName);
+            int parsed;
+            return int.TryParse(value, out parsed) ? parsed : 0;
+        }
+
+        private static string ExtractRawNumber(string json, string propertyName)
+        {
+            if (string.IsNullOrEmpty(json))
+            {
+                return string.Empty;
+            }
+
+            string marker = "\"" + propertyName + "\":";
+            int markerIndex = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return string.Empty;
+            }
+
+            int start = markerIndex + marker.Length;
+            int end = start;
+            while (end < json.Length && char.IsDigit(json[end]))
+            {
+                end++;
+            }
+
+            return json.Substring(start, end - start);
+        }
+
+        private static string ExtractString(string json, string propertyName)
+        {
+            if (string.IsNullOrEmpty(json))
+            {
+                return string.Empty;
+            }
+
+            string marker = "\"" + propertyName + "\":\"";
+            int markerIndex = json.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return string.Empty;
+            }
+
+            int start = markerIndex + marker.Length;
+            int end = json.IndexOf("\"", start, StringComparison.Ordinal);
+            if (end < start)
+            {
+                return string.Empty;
+            }
+
+            return json.Substring(start, end - start);
+        }
+
         private static string TrimForStatus(string value)
         {
             if (string.IsNullOrEmpty(value))
@@ -569,6 +764,21 @@ namespace WeChatPlus.Shell
                     content = content.Substring(0, 18) + "...";
                 }
                 return Reply.Title + " " + content;
+            }
+        }
+
+        private sealed class AccountListItem
+        {
+            public AccountListItem(AccountRecord account)
+            {
+                Account = account;
+            }
+
+            public AccountRecord Account { get; private set; }
+
+            public override string ToString()
+            {
+                return Account.DisplayName;
             }
         }
     }

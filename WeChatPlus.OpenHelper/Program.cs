@@ -65,6 +65,25 @@ namespace WeChatPlus.OpenHelper
                 return result;
             }
 
+            if (string.Equals(command.Action, "windows", StringComparison.OrdinalIgnoreCase))
+            {
+                HelperCommandResult result = HelperCommandResult.Success("multi-instance windows");
+                System.Diagnostics.Process[] processes = WeChatService.GetProcesses();
+                System.Collections.ArrayList windows = new System.Collections.ArrayList();
+                for (int i = 0; i < processes.Length; i++)
+                {
+                    System.Collections.Generic.Dictionary<string, object> item = new System.Collections.Generic.Dictionary<string, object>();
+                    item["processId"] = processes[i].Id;
+                    item["windowHandle"] = processes[i].MainWindowHandle.ToInt64().ToString();
+                    item["title"] = processes[i].MainWindowTitle ?? string.Empty;
+                    item["hasWindow"] = processes[i].MainWindowHandle != IntPtr.Zero;
+                    windows.Add(item);
+                }
+                result.Data["windows"] = windows;
+                result.Data["processCount"] = processes.Length;
+                return result;
+            }
+
             if (string.Equals(command.Action, "start", StringComparison.OrdinalIgnoreCase))
             {
                 HelperCommandResult result = HelperCommandResult.Success("multi-instance start");
@@ -93,6 +112,29 @@ namespace WeChatPlus.OpenHelper
                 HelperCommandResult result = HelperCommandResult.Success("multi-instance close-all-mutex");
                 result.Data["closedCount"] = closed;
                 result.Data["processCount"] = WeChatService.CountProcesses();
+                return result;
+            }
+
+            if (string.Equals(command.Action, "focus", StringComparison.OrdinalIgnoreCase))
+            {
+                long handleValue;
+                if (!long.TryParse(command.GetOption("handle"), out handleValue))
+                {
+                    return HelperCommandResult.Failure("multi-instance focus", "Missing or invalid --handle.");
+                }
+
+                bool focused = WeChatService.FocusWindow(new IntPtr(handleValue));
+                HelperCommandResult result = HelperCommandResult.Success("multi-instance focus");
+                result.Data["focused"] = focused;
+                result.Data["windowHandle"] = handleValue.ToString();
+                return result;
+            }
+
+            if (string.Equals(command.Action, "close-all", StringComparison.OrdinalIgnoreCase))
+            {
+                int closed = WeChatService.CloseAllProcesses();
+                HelperCommandResult result = HelperCommandResult.Success("multi-instance close-all");
+                result.Data["closedCount"] = closed;
                 return result;
             }
 

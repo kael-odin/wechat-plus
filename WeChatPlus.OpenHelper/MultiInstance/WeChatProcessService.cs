@@ -1,11 +1,15 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
 namespace WeChatPlus.OpenHelper.MultiInstance
 {
     public sealed class WeChatProcessService
     {
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
         public int CountProcesses()
         {
             return Process.GetProcessesByName("WeChat").Length;
@@ -75,6 +79,33 @@ namespace WeChatPlus.OpenHelper.MultiInstance
                 closed += MutexHandleCloser.CloseWeChatMutexes(processes[i]);
             }
             return closed;
+        }
+
+        public int CloseAllProcesses()
+        {
+            int closed = 0;
+            Process[] processes = GetProcesses();
+            for (int i = 0; i < processes.Length; i++)
+            {
+                try
+                {
+                    processes[i].Kill();
+                    closed++;
+                }
+                catch
+                {
+                }
+            }
+            return closed;
+        }
+
+        public bool FocusWindow(IntPtr windowHandle)
+        {
+            if (windowHandle == IntPtr.Zero)
+            {
+                return false;
+            }
+            return SetForegroundWindow(windowHandle);
         }
 
         private static string ReadInstallPath(RegistryKey key)
