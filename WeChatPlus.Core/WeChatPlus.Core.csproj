@@ -40,6 +40,8 @@
     <Compile Include="Contracts\HelperCommand.cs" />
     <Compile Include="Contracts\HelperCommandParser.cs" />
     <Compile Include="Contracts\HelperCommandResult.cs" />
+    <Compile Include="Contracts\HelperWindowInfo.cs" />
+    <Compile Include="Contracts\HelperWindowResultParser.cs" />
     <Compile Include="Contracts\JsonResultWriter.cs" />
     <Compile Include="Models\AccountRecord.cs" />
     <Compile Include="Models\LicenseState.cs" />

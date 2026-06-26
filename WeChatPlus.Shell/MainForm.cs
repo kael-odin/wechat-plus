@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using WeChatPlus.Core.Contracts;
 using WeChatPlus.Core.Models;
 using WeChatPlus.Core.Services;
 
@@ -717,8 +718,8 @@ namespace WeChatPlus.Shell
             {
                 HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
                 string json = client.Run("multi-instance windows");
-                int processCount = ExtractInt(json, "processCount");
-                if (processCount == 0)
+                HelperWindowInfo[] windows = HelperWindowResultParser.ParseWindows(json);
+                if (windows.Length == 0)
                 {
                     _workspaceStatus.Text = "当前没有检测到微信窗口。";
                     RefreshAccounts();
@@ -726,11 +727,24 @@ namespace WeChatPlus.Shell
                     return;
                 }
 
-                AccountRecord record = _accountRepository.UpsertFromProcess(ExtractInt(json, "processId"), "微信窗口 " + DateTime.Now.ToString("HH:mm:ss"), "Detected");
-                record.WindowHandle = ExtractString(json, "windowHandle");
-                _accountRepository.UpdateStatus(record.Id, "Detected", record.ProcessId, record.WindowHandle);
+                AccountRecord selected = null;
+                for (int i = 0; i < windows.Length; i++)
+                {
+                    HelperWindowInfo window = windows[i];
+                    string displayName = string.IsNullOrWhiteSpace(window.Title)
+                        ? "微信窗口 " + window.ProcessId
+                        : window.Title;
+                    AccountRecord record = _accountRepository.UpsertFromProcess(window.ProcessId, displayName, window.HasWindow ? "Detected" : "Starting");
+                    _accountRepository.UpdateStatus(record.Id, window.HasWindow ? "Detected" : "Starting", record.ProcessId, window.WindowHandle);
+                    selected = record;
+                }
+
                 RefreshAccounts();
-                SelectAccount(record.Id);
+                if (selected != null)
+                {
+                    SelectAccount(selected.Id);
+                }
+                _workspaceStatus.Text = "已刷新微信窗口：" + windows.Length + " 个。";
                 RefreshWeChatProcessStatus();
             }
             catch (Exception ex)

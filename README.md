@@ -54,9 +54,9 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 试用/会员授权状态：设备哈希、试用期、离线宽限期、本地激活码状态、云端激活请求构造；不硬编码真实密钥。
 - 开源组件声明：默认记录 `WeChatPlus.OpenHelper`、GPLv3 许可证和上游源码地址，并在商用壳内展示。
 - 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance focus --handle <hWnd>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
-- 工作台工具：微信进程/窗口状态刷新、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口。
+- 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口。
 - 构建输出：商用壳会把独立助手组件复制到自身输出目录，便于进程边界调用。
-- 测试：命令解析、JSON 输出、话术种子/搜索、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除、开源组件声明、试用/本地激活授权状态。
+- 测试：命令解析、JSON 输出、助手窗口 JSON 解析、话术种子/搜索、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除、开源组件声明、试用/本地激活授权状态。
 
 下一步：
 

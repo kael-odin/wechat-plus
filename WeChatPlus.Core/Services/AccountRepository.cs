@@ -55,7 +55,10 @@ namespace WeChatPlus.Core.Services
                 accounts.Add(record);
             }
 
-            record.DisplayName = string.IsNullOrWhiteSpace(displayName) ? "微信账号" : displayName;
+            if (string.IsNullOrWhiteSpace(record.DisplayName) || IsGeneratedDisplayName(record.DisplayName))
+            {
+                record.DisplayName = string.IsNullOrWhiteSpace(displayName) ? "微信账号" : displayName;
+            }
             record.ProcessId = processId;
             record.Status = string.IsNullOrWhiteSpace(status) ? "Unknown" : status;
             record.LastActiveAtUtc = now;
@@ -122,6 +125,13 @@ namespace WeChatPlus.Core.Services
         private void Save(AccountRecord[] accounts)
         {
             File.WriteAllText(_accountsPath, _serializer.Serialize(accounts ?? new AccountRecord[0]));
+        }
+
+        private static bool IsGeneratedDisplayName(string displayName)
+        {
+            return string.Equals(displayName, "微信账号", StringComparison.OrdinalIgnoreCase)
+                || displayName.StartsWith("微信窗口 ", StringComparison.OrdinalIgnoreCase)
+                || displayName.StartsWith("微信实例 ", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

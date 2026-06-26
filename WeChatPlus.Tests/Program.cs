@@ -16,6 +16,7 @@ namespace WeChatPlus.Tests
             {
                 Run("parses helper commands", ParsesHelperCommands);
                 Run("serializes helper result", SerializesHelperResult);
+                Run("parses helper window results", ParsesHelperWindowResults);
                 Run("seeds and searches quick replies", SeedsAndSearchesQuickReplies);
                 Run("updates quick replies by id", UpdatesQuickRepliesById);
                 Run("deletes quick replies by id", DeletesQuickRepliesById);
@@ -23,6 +24,7 @@ namespace WeChatPlus.Tests
                 Run("imports quick reply csv", ImportsQuickReplyCsv);
                 Run("persists account records", PersistsAccountRecords);
                 Run("renames and deletes account records", RenamesAndDeletesAccountRecords);
+                Run("preserves account remarks on process refresh", PreservesAccountRemarksOnProcessRefresh);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
@@ -72,6 +74,21 @@ namespace WeChatPlus.Tests
             AssertContains(json, "\"ok\":true", "ok json");
             AssertContains(json, "\"command\":\"version\"", "command json");
             AssertContains(json, "\"version\":\"0.1.0\"", "data json");
+        }
+
+        private static void ParsesHelperWindowResults()
+        {
+            string json = "{\"ok\":true,\"command\":\"multi-instance windows\",\"message\":\"\",\"data\":{\"windows\":[{\"processId\":1001,\"windowHandle\":\"123456\",\"title\":\"微信一号\",\"hasWindow\":true},{\"processId\":1002,\"windowHandle\":\"0\",\"title\":\"\",\"hasWindow\":false}],\"processCount\":2}}";
+
+            HelperWindowInfo[] windows = HelperWindowResultParser.ParseWindows(json);
+
+            AssertEqual("2", windows.Length.ToString(), "window count");
+            AssertEqual("1001", windows[0].ProcessId.ToString(), "first pid");
+            AssertEqual("123456", windows[0].WindowHandle, "first handle");
+            AssertEqual("微信一号", windows[0].Title, "first title");
+            AssertTrue(windows[0].HasWindow, "first has window");
+            AssertEqual("1002", windows[1].ProcessId.ToString(), "second pid");
+            AssertTrue(!windows[1].HasWindow, "second has window");
         }
 
         private static void SeedsAndSearchesQuickReplies()
@@ -156,6 +173,19 @@ namespace WeChatPlus.Tests
             AssertEqual(first.Id, accounts[0].Id, "remaining account id");
             AssertEqual("售前客服", accounts[0].DisplayName, "renamed account");
             AssertTrue(!reloaded.UpdateDisplayName("missing-account", "无效账号"), "missing rename result");
+        }
+
+        private static void PreservesAccountRemarksOnProcessRefresh()
+        {
+            string root = CreateTempRoot();
+            AccountRepository repository = new AccountRepository(root);
+            AccountRecord record = repository.UpsertFromProcess(4001, "微信窗口 4001", "Detected");
+            repository.UpdateDisplayName(record.Id, "售前客服");
+
+            repository.UpsertFromProcess(4001, "微信窗口标题", "Detected");
+
+            AccountRecord[] accounts = repository.GetAll();
+            AssertEqual("售前客服", accounts[0].DisplayName, "remark after refresh");
         }
 
         private static void BuildsLicenseActivationRequest()
