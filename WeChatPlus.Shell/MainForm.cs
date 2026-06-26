@@ -257,20 +257,28 @@ namespace WeChatPlus.Shell
             _replyList = new ListBox();
             _replyList.Location = new Point(116, 46);
             _replyList.Size = new Size(156, 420);
+            _replyList.SelectedIndexChanged += ReplySelectionChanged;
             _replyList.DoubleClick += ReplyDoubleClicked;
             panel.Controls.Add(_replyList);
 
             Button editButton = SideButton("编辑", 10, 480);
+            editButton.Text = "编辑/新增";
             editButton.Click += EditReplyClicked;
             panel.Controls.Add(editButton);
 
             Button importButton = SideButton("导入", 100, 480);
+            importButton.Text = "导入";
             importButton.Click += ImportClicked;
             panel.Controls.Add(importButton);
 
             Button exportButton = SideButton("导出", 190, 480);
+            exportButton.Text = "导出";
             exportButton.Click += ExportClicked;
             panel.Controls.Add(exportButton);
+
+            Button deleteButton = SideButton("删除", 100, 520);
+            deleteButton.Click += DeleteReplyClicked;
+            panel.Controls.Add(deleteButton);
 
             return panel;
         }
@@ -389,35 +397,61 @@ namespace WeChatPlus.Shell
 
         private void ReplyDoubleClicked(object sender, EventArgs e)
         {
+            CopySelectedReplyToClipboard("话术已准备粘贴/发送：");
+        }
+
+        private void ReplySelectionChanged(object sender, EventArgs e)
+        {
+            CopySelectedReplyToClipboard("话术已复制到剪贴板：");
+        }
+
+        private void CopySelectedReplyToClipboard(string statusPrefix)
+        {
             ReplyListItem item = _replyList.SelectedItem as ReplyListItem;
             if (item == null)
             {
                 return;
             }
+
+            if (string.IsNullOrEmpty(item.Reply.Content))
+            {
+                _workspaceStatus.Text = "当前话术没有可复制内容：" + item.Reply.Title;
+                return;
+            }
+
             Clipboard.SetText(item.Reply.Content);
-            _workspaceStatus.Text = "话术已复制到剪贴板：" + item.Reply.Title;
+            _workspaceStatus.Text = statusPrefix + item.Reply.Title;
         }
 
         private void EditReplyClicked(object sender, EventArgs e)
         {
+            ReplyListItem editingItem = _replyList.SelectedItem as ReplyListItem;
+            QuickReply editing = editingItem == null ? null : editingItem.Reply;
+
             using (Form editor = new Form())
             {
-                editor.Text = "新增话术";
+                editor.Text = editing == null ? "新增话术" : "编辑话术";
                 editor.Size = new Size(420, 300);
                 editor.StartPosition = FormStartPosition.CenterParent;
 
                 TextBox title = new TextBox();
                 title.Location = new Point(16, 16);
                 title.Size = new Size(360, 23);
-                title.Text = "新话术";
+                title.Text = editing == null ? "新话术" : editing.Title;
                 editor.Controls.Add(title);
 
                 TextBox content = new TextBox();
                 content.Location = new Point(16, 52);
                 content.Size = new Size(360, 150);
                 content.Multiline = true;
-                content.Text = "请输入话术内容";
+                content.Text = editing == null ? "请输入话术内容" : editing.Content;
                 editor.Controls.Add(content);
+
+                TextBox tags = new TextBox();
+                tags.Location = new Point(16, 210);
+                tags.Size = new Size(260, 23);
+                tags.Text = editing == null ? title.Text : editing.Tags;
+                editor.Controls.Add(tags);
 
                 Button save = new Button();
                 save.Text = "保存";
@@ -430,15 +464,50 @@ namespace WeChatPlus.Shell
                 {
                     CategoryListItem selected = _categoryList.SelectedItem as CategoryListItem;
                     QuickReply reply = new QuickReply();
+                    if (editing != null)
+                    {
+                        reply.Id = editing.Id;
+                        reply.CreatedAtUtc = editing.CreatedAtUtc;
+                    }
+
                     reply.Title = title.Text;
                     reply.Content = content.Text;
-                    reply.CategoryId = selected == null ? "common" : selected.Category.Id;
-                    reply.Tags = title.Text;
-                    reply.SortOrder = _currentReplies == null ? 100 : _currentReplies.Length + 100;
+                    reply.CategoryId = selected == null
+                        ? (editing == null || string.IsNullOrEmpty(editing.CategoryId) ? "common" : editing.CategoryId)
+                        : selected.Category.Id;
+                    reply.Tags = string.IsNullOrWhiteSpace(tags.Text) ? title.Text : tags.Text;
+                    reply.SortOrder = editing == null ? (_currentReplies == null ? 100 : _currentReplies.Length + 100) : editing.SortOrder;
+                    reply.IsFavorite = editing != null && editing.IsFavorite;
                     _replyRepository.SaveReply(reply);
                     RefreshReplies();
+                    _workspaceStatus.Text = editing == null ? "话术已新增：" + reply.Title : "话术已更新：" + reply.Title;
                 }
             }
+        }
+
+        private void DeleteReplyClicked(object sender, EventArgs e)
+        {
+            ReplyListItem item = _replyList.SelectedItem as ReplyListItem;
+            if (item == null)
+            {
+                _workspaceStatus.Text = "请先选择要删除的话术。";
+                return;
+            }
+
+            DialogResult result = MessageBox.Show("确认删除话术“" + item.Reply.Title + "”？", "删除话术", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (_replyRepository.DeleteReply(item.Reply.Id))
+            {
+                RefreshReplies();
+                _workspaceStatus.Text = "话术已删除：" + item.Reply.Title;
+                return;
+            }
+
+            _workspaceStatus.Text = "未找到要删除的话术：" + item.Reply.Title;
         }
 
         private void ImportClicked(object sender, EventArgs e)
@@ -641,7 +710,22 @@ namespace WeChatPlus.Shell
                 return;
             }
 
-            _workspaceStatus.Text = "当前账号：" + item.Account.DisplayName + " / 状态：" + item.Account.Status + " / PID：" + item.Account.ProcessId;
+            string status = "当前账号：" + item.Account.DisplayName + " / 状态：" + item.Account.Status + " / PID：" + item.Account.ProcessId;
+            if (File.Exists(_helperPath) && !string.IsNullOrWhiteSpace(item.Account.WindowHandle))
+            {
+                try
+                {
+                    HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
+                    string output = client.Run("multi-instance focus --handle " + item.Account.WindowHandle);
+                    status = status + " / 聚焦：" + TrimForStatus(output);
+                }
+                catch (Exception ex)
+                {
+                    status = status + " / 聚焦失败：" + ex.Message;
+                }
+            }
+
+            _workspaceStatus.Text = status;
         }
 
         private void SelectAccount(string id)

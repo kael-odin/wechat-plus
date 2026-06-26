@@ -17,6 +17,8 @@ namespace WeChatPlus.Tests
                 Run("parses helper commands", ParsesHelperCommands);
                 Run("serializes helper result", SerializesHelperResult);
                 Run("seeds and searches quick replies", SeedsAndSearchesQuickReplies);
+                Run("updates quick replies by id", UpdatesQuickRepliesById);
+                Run("deletes quick replies by id", DeletesQuickRepliesById);
                 Run("imports exported quick reply json", ImportsExportedQuickReplyJson);
                 Run("imports quick reply csv", ImportsQuickReplyCsv);
                 Run("persists account records", PersistsAccountRecords);
@@ -129,6 +131,54 @@ namespace WeChatPlus.Tests
             AssertContains(request.BodyJson, "\"licenseKey\":\"ABC-123-SECRET\"", "license key body");
             AssertContains(request.BodyJson, "\"deviceIdHash\":\"" + state.DeviceIdHash + "\"", "device hash body");
             AssertContains(request.BodyJson, "\"product\":\"wechat-plus\"", "product body");
+        }
+
+        private static void UpdatesQuickRepliesById()
+        {
+            QuickReplyRepository repository = new QuickReplyRepository(CreateTempRoot());
+            QuickReply reply = new QuickReply();
+            reply.Id = "reply-to-update";
+            reply.Title = "Before";
+            reply.Content = "Original content";
+            reply.CategoryId = "common";
+            reply.Tags = "old";
+            reply.SortOrder = 10;
+            repository.SaveReply(reply);
+
+            QuickReply changed = new QuickReply();
+            changed.Id = "reply-to-update";
+            changed.Title = "After";
+            changed.Content = "Updated content";
+            changed.CategoryId = "welcome";
+            changed.Tags = "new,updated";
+            changed.SortOrder = 20;
+            changed.IsFavorite = true;
+            repository.SaveReply(changed);
+
+            QuickReply[] replies = repository.Search("Updated");
+            AssertEqual("1", replies.Length.ToString(), "updated reply count");
+            AssertEqual("After", replies[0].Title, "updated title");
+            AssertEqual("welcome", replies[0].CategoryId, "updated category");
+            AssertEqual("new,updated", replies[0].Tags, "updated tags");
+            AssertTrue(replies[0].IsFavorite, "updated favorite");
+        }
+
+        private static void DeletesQuickRepliesById()
+        {
+            QuickReplyRepository repository = new QuickReplyRepository(CreateTempRoot());
+            QuickReply reply = new QuickReply();
+            reply.Id = "reply-to-delete";
+            reply.Title = "Delete me";
+            reply.Content = "Temporary content";
+            reply.CategoryId = "common";
+            reply.Tags = "temporary";
+            repository.SaveReply(reply);
+
+            bool deleted = repository.DeleteReply("reply-to-delete");
+
+            AssertTrue(deleted, "delete result");
+            AssertEqual("0", repository.Search("Temporary").Length.ToString(), "deleted search count");
+            AssertTrue(!repository.DeleteReply("missing-reply"), "delete missing result");
         }
 
         private static void ImportsExportedQuickReplyJson()

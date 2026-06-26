@@ -100,6 +100,24 @@ namespace WeChatPlus.Core.Services
             SaveReplies(replies.ToArray());
         }
 
+        public bool DeleteReply(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return false;
+            }
+
+            List<QuickReply> replies = new List<QuickReply>(GetAllReplies());
+            int removed = replies.RemoveAll(x => string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (removed == 0)
+            {
+                return false;
+            }
+
+            SaveReplies(replies.ToArray());
+            return true;
+        }
+
         public string ExportJson()
         {
             Dictionary<string, object> payload = new Dictionary<string, object>();

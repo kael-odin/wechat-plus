@@ -49,13 +49,13 @@ WeChat Plus 的商业化边界按以下方式设计：
 已完成：
 
 - 三栏工作台 UI：账号栏、微信工作区占位、右侧快捷话术栏、顶部会员/开源声明入口、底部截图入口。
-- 本地话术库：默认分类、默认话术、搜索、新增、复制、JSON 导入导出、CSV 导入。
-- 本地账号管理：账号记录保存到 `accounts.json`，启动/刷新微信窗口后更新账号状态。
+- 本地话术库：默认分类、默认话术、搜索、新增/编辑/删除、点击复制、JSON 导入导出、CSV 导入。
+- 本地账号管理：账号记录保存到 `accounts.json`，启动/刷新微信窗口后更新账号状态，选中已检测窗口时通过助手组件请求聚焦。
 - 试用授权状态：设备哈希、试用期、离线宽限期、云端激活请求构造；不硬编码真实密钥。
 - 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance focus --handle <hWnd>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
 - 工作台工具：微信进程/窗口状态刷新、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口。
 - 构建输出：商用壳会把独立助手组件复制到自身输出目录，便于进程边界调用。
-- 测试：命令解析、JSON 输出、话术种子/搜索、JSON/CSV 导入、试用授权状态。
+- 测试：命令解析、JSON 输出、话术种子/搜索、话术更新/删除、JSON/CSV 导入、试用授权状态。
 
 下一步：
 
