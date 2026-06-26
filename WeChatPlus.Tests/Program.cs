@@ -22,6 +22,7 @@ namespace WeChatPlus.Tests
                 Run("imports exported quick reply json", ImportsExportedQuickReplyJson);
                 Run("imports quick reply csv", ImportsQuickReplyCsv);
                 Run("persists account records", PersistsAccountRecords);
+                Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
                 Console.WriteLine("All tests passed: " + _passed);
@@ -131,6 +132,19 @@ namespace WeChatPlus.Tests
             AssertContains(request.BodyJson, "\"licenseKey\":\"ABC-123-SECRET\"", "license key body");
             AssertContains(request.BodyJson, "\"deviceIdHash\":\"" + state.DeviceIdHash + "\"", "device hash body");
             AssertContains(request.BodyJson, "\"product\":\"wechat-plus\"", "product body");
+        }
+
+        private static void SeedsOpenSourceComponentDeclarations()
+        {
+            ComponentRepository repository = new ComponentRepository(CreateTempRoot());
+
+            OpenSourceComponent[] components = repository.GetAll();
+
+            AssertTrue(components.Length > 0, "component count");
+            AssertEqual("wechat-plus-open-helper", components[0].Id, "component id");
+            AssertEqual("WeChatPlus.OpenHelper", components[0].Name, "component name");
+            AssertEqual("GPLv3", components[0].License, "component license");
+            AssertContains(components[0].SourceUrl, "huiyadanli/RevokeMsgPatcher", "component source");
         }
 
         private static void UpdatesQuickRepliesById()

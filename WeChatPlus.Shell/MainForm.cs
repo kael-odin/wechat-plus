@@ -15,6 +15,7 @@ namespace WeChatPlus.Shell
         private readonly QuickReplyRepository _replyRepository;
         private readonly TrialLicenseService _licenseService;
         private readonly AccountRepository _accountRepository;
+        private readonly ComponentRepository _componentRepository;
         private readonly LicenseApiClient _licenseApiClient;
         private readonly string _helperPath;
 
@@ -38,6 +39,7 @@ namespace WeChatPlus.Shell
             _replyRepository = new QuickReplyRepository(_dataRoot);
             _licenseService = new TrialLicenseService(_dataRoot);
             _accountRepository = new AccountRepository(_dataRoot);
+            _componentRepository = new ComponentRepository(_dataRoot);
             _licenseApiClient = new LicenseApiClient("https://license.example.invalid/api");
             _helperPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WeChatPlus.OpenHelper.exe");
 
@@ -594,11 +596,21 @@ namespace WeChatPlus.Shell
 
         private void ShowOpenSourceNotice(object sender, EventArgs e)
         {
+            OpenSourceComponent[] components = _componentRepository.GetAll();
+            string componentLines = string.Empty;
+            for (int i = 0; i < components.Length; i++)
+            {
+                OpenSourceComponent component = components[i];
+                componentLines += component.Name + " " + component.Version + Environment.NewLine +
+                    "许可证：" + component.License + Environment.NewLine +
+                    "源码：" + component.SourceUrl + Environment.NewLine;
+            }
+
             MessageBox.Show(
                 "WeChat Plus 商用壳不复制、不链接 GPLv3 源码。" + Environment.NewLine +
                 "多开/补丁相关底层能力由独立开源助手组件提供，并通过进程边界调用。" + Environment.NewLine +
-                "上游项目：https://github.com/huiyadanli/RevokeMsgPatcher" + Environment.NewLine +
-                "许可证：GPLv3",
+                Environment.NewLine +
+                componentLines,
                 "开源组件声明");
         }
 
