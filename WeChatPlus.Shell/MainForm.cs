@@ -18,6 +18,7 @@ namespace WeChatPlus.Shell
         private readonly AccountRepository _accountRepository;
         private readonly ComponentRepository _componentRepository;
         private readonly LicenseApiClient _licenseApiClient;
+        private readonly DiagnosticsLogService _diagnosticsLog;
         private readonly string _helperPath;
 
         private ListBox _accountList;
@@ -42,6 +43,7 @@ namespace WeChatPlus.Shell
             _accountRepository = new AccountRepository(_dataRoot);
             _componentRepository = new ComponentRepository(_dataRoot);
             _licenseApiClient = new LicenseApiClient("https://license.example.invalid/api");
+            _diagnosticsLog = new DiagnosticsLogService(_dataRoot);
             _helperPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "WeChatPlus.OpenHelper.exe");
 
             InitializeComponent();
@@ -90,14 +92,16 @@ namespace WeChatPlus.Shell
             _helperStatus.Location = new Point(190, 18);
             top.Controls.Add(_helperStatus);
 
-            Button memberButton = TopButton("会员", 760, ShowMemberState);
-            Button noticeButton = TopButton("开源声明", 845, ShowOpenSourceNotice);
-            Button refreshButton = TopButton("刷新助手", 950, delegate { RefreshHelperStatus(); });
-            Button collapseButton = TopButton("收起侧栏", 1065, delegate { ToggleRightPanel(); });
+            Button memberButton = TopButton("会员", 650, ShowMemberState);
+            Button noticeButton = TopButton("开源声明", 735, ShowOpenSourceNotice);
+            Button refreshButton = TopButton("刷新助手", 840, delegate { RefreshHelperStatus(); });
+            Button diagnosticsButton = TopButton("诊断", 945, ExportDiagnosticsClicked);
+            Button collapseButton = TopButton("收起侧栏", 1050, delegate { ToggleRightPanel(); });
 
             top.Controls.Add(memberButton);
             top.Controls.Add(noticeButton);
             top.Controls.Add(refreshButton);
+            top.Controls.Add(diagnosticsButton);
             top.Controls.Add(collapseButton);
             return top;
         }
@@ -392,6 +396,7 @@ namespace WeChatPlus.Shell
             }
             catch (Exception ex)
             {
+                LogDiagnostic("helper.status", "Refresh helper status failed.", ex);
                 _helperStatus.Text = "助手组件：异常 " + ex.Message;
             }
         }
@@ -417,6 +422,7 @@ namespace WeChatPlus.Shell
             }
             catch (Exception ex)
             {
+                LogDiagnostic("helper.start", "Start WeChat failed.", ex);
                 MessageBox.Show("启动微信失败：" + ex.Message, "添加账号");
             }
         }
@@ -545,13 +551,21 @@ namespace WeChatPlus.Shell
                 return;
             }
 
-            string content = File.ReadAllText(dialog.FileName);
-            string extension = Path.GetExtension(dialog.FileName);
-            int imported = string.Equals(extension, ".csv", StringComparison.OrdinalIgnoreCase)
-                ? _replyRepository.ImportCsv(content, true)
-                : _replyRepository.ImportJson(content, true);
-            RefreshReplies();
-            MessageBox.Show("已导入 " + imported + " 条话术。", "导入话术");
+            try
+            {
+                string content = File.ReadAllText(dialog.FileName);
+                string extension = Path.GetExtension(dialog.FileName);
+                int imported = string.Equals(extension, ".csv", StringComparison.OrdinalIgnoreCase)
+                    ? _replyRepository.ImportCsv(content, true)
+                    : _replyRepository.ImportJson(content, true);
+                RefreshReplies();
+                MessageBox.Show("已导入 " + imported + " 条话术。", "导入话术");
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic("quick-reply.import", "Import quick replies failed.", ex);
+                MessageBox.Show("导入失败：" + ex.Message, "导入话术");
+            }
         }
 
         private void ExportClicked(object sender, EventArgs e)
@@ -561,8 +575,16 @@ namespace WeChatPlus.Shell
             dialog.FileName = "wechat-plus-quick-replies.json";
             if (dialog.ShowDialog(this) == DialogResult.OK)
             {
-                File.WriteAllText(dialog.FileName, _replyRepository.ExportJson());
-                MessageBox.Show("已导出话术库。", "导出话术");
+                try
+                {
+                    File.WriteAllText(dialog.FileName, _replyRepository.ExportJson());
+                    MessageBox.Show("已导出话术库。", "导出话术");
+                }
+                catch (Exception ex)
+                {
+                    LogDiagnostic("quick-reply.export", "Export quick replies failed.", ex);
+                    MessageBox.Show("导出失败：" + ex.Message, "导出话术");
+                }
             }
         }
 
@@ -593,6 +615,7 @@ namespace WeChatPlus.Shell
             }
             catch (Exception ex)
             {
+                LogDiagnostic("screenshot", "Screenshot failed.", ex);
                 MessageBox.Show("截图失败：" + ex.Message, "截图工具");
             }
             finally
@@ -688,6 +711,30 @@ namespace WeChatPlus.Shell
                 "开源组件声明");
         }
 
+        private void ExportDiagnosticsClicked(object sender, EventArgs e)
+        {
+            using (SaveFileDialog dialog = new SaveFileDialog())
+            {
+                dialog.Title = "导出诊断日志";
+                dialog.Filter = "Log files (*.log)|*.log|Text files (*.txt)|*.txt|All files (*.*)|*.*";
+                dialog.FileName = "wechat-plus-diagnostics.log";
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                try
+                {
+                    _diagnosticsLog.ExportTo(dialog.FileName);
+                    _workspaceStatus.Text = "诊断日志已导出：" + dialog.FileName;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("导出诊断日志失败：" + ex.Message, "诊断日志");
+                }
+            }
+        }
+
         private void ToggleRightPanel()
         {
             _rightPanelCollapsed = !_rightPanelCollapsed;
@@ -717,6 +764,7 @@ namespace WeChatPlus.Shell
             }
             catch (Exception ex)
             {
+                LogDiagnostic("helper.process-status", "Refresh WeChat process status failed.", ex);
                 _processStatus.Text = "微信进程状态：刷新失败 " + ex.Message;
             }
         }
@@ -766,6 +814,7 @@ namespace WeChatPlus.Shell
             }
             catch (Exception ex)
             {
+                LogDiagnostic("helper.windows", "Refresh WeChat windows failed.", ex);
                 MessageBox.Show("刷新微信窗口失败：" + ex.Message, "刷新账号");
             }
         }
@@ -799,6 +848,7 @@ namespace WeChatPlus.Shell
             }
             catch (Exception ex)
             {
+                LogDiagnostic("helper.close-all", "Close all WeChat processes failed.", ex);
                 MessageBox.Show("关闭微信失败：" + ex.Message, "关闭微信");
             }
         }
@@ -847,6 +897,7 @@ namespace WeChatPlus.Shell
             }
             catch (Exception ex)
             {
+                LogDiagnostic("helper.close-current", "Close current WeChat process failed.", ex);
                 MessageBox.Show("关闭当前微信失败：" + ex.Message, "关闭当前");
             }
         }
@@ -965,6 +1016,7 @@ namespace WeChatPlus.Shell
                 }
                 catch (Exception ex)
                 {
+                    LogDiagnostic("helper.focus", "Focus WeChat window failed.", ex);
                     _workspaceStatus.Text = WorkspaceStatusFormatter.FormatFocusFailure(item.Account, ex.Message);
                     return;
                 }
@@ -994,6 +1046,17 @@ namespace WeChatPlus.Shell
         private static int ExtractProcessId(string helperJson)
         {
             return ExtractInt(helperJson, "processId");
+        }
+
+        private void LogDiagnostic(string area, string message, Exception exception)
+        {
+            try
+            {
+                _diagnosticsLog.Write(area, message, exception);
+            }
+            catch
+            {
+            }
         }
 
         private static int[] ExtractProcessIds(HelperWindowInfo[] windows)

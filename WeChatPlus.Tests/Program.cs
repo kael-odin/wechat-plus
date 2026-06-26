@@ -31,6 +31,7 @@ namespace WeChatPlus.Tests
                 Run("defines release package manifest", DefinesReleasePackageManifest);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
+                Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
@@ -319,6 +320,26 @@ namespace WeChatPlus.Tests
             AssertEqual("packaged-helper", components[0].Id, "packaged component id");
             AssertEqual("Packaged Helper", components[0].Name, "packaged component name");
             AssertEqual("abc", components[0].Sha256, "packaged component sha");
+        }
+
+        private static void WritesAndExportsDiagnosticsLog()
+        {
+            string root = CreateTempRoot();
+            DiagnosticsLogService diagnostics = new DiagnosticsLogService(root);
+
+            string logPath = diagnostics.Write("helper", "start failed", new InvalidOperationException("missing helper"));
+            string exportedPath = Path.Combine(root, "diagnostics-export.log");
+            diagnostics.ExportTo(exportedPath);
+
+            string log = File.ReadAllText(logPath);
+            string exported = File.ReadAllText(exportedPath);
+
+            AssertTrue(File.Exists(logPath), "diagnostics log exists");
+            AssertContains(log, "helper", "diagnostics area");
+            AssertContains(log, "start failed", "diagnostics message");
+            AssertContains(log, "InvalidOperationException", "diagnostics exception type");
+            AssertContains(log, "missing helper", "diagnostics exception message");
+            AssertEqual(log, exported, "exported diagnostics content");
         }
 
         private static void UpdatesQuickRepliesById()
