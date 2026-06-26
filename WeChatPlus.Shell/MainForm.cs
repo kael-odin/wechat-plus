@@ -361,7 +361,16 @@ namespace WeChatPlus.Shell
 
         private void LoadData()
         {
-            _replyRepository.EnsureSeedData();
+            LoadData(true);
+        }
+
+        private void LoadData(bool seedReplies)
+        {
+            if (seedReplies)
+            {
+                _replyRepository.EnsureSeedData();
+            }
+
             RefreshAccounts();
 
             _categoryList.Items.Clear();
@@ -1002,6 +1011,7 @@ namespace WeChatPlus.Shell
                     FormatSettingsPath("话术数据", summary.QuickRepliesPath) + Environment.NewLine +
                     FormatSettingsPath("授权状态", summary.LicenseStatePath) + Environment.NewLine +
                     FormatSettingsPath("隐私锁状态", summary.PrivacyLockPath) + Environment.NewLine +
+                    FormatSettingsPath("隐私说明", summary.PrivacyNoticePath) + Environment.NewLine +
                     FormatSettingsPath("开源组件声明", summary.ComponentsPath) + Environment.NewLine +
                     FormatSettingsPath("诊断日志", summary.DiagnosticsPath);
                 dialog.Controls.Add(details);
@@ -1011,8 +1021,27 @@ namespace WeChatPlus.Shell
                 note.Size = new Size(560, 32);
                 note.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
                 note.ForeColor = Color.FromArgb(80, 88, 96);
-                note.Text = "当前设置页只读展示关键路径，便于排查运行包、助手组件和本地数据文件。";
+                note.Text = "本地数据清理会删除账号备注、话术、授权缓存、隐私锁状态、组件声明和诊断日志，不会删除运行程序。";
                 dialog.Controls.Add(note);
+
+                Button privacy = new Button();
+                privacy.Text = "隐私说明";
+                privacy.Location = new Point(430, 426);
+                privacy.Size = new Size(92, 28);
+                privacy.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+                privacy.Click += delegate { ShowPrivacyNotice(); };
+                dialog.Controls.Add(privacy);
+
+                Button clearData = new Button();
+                clearData.Text = "清理数据";
+                clearData.Location = new Point(532, 426);
+                clearData.Size = new Size(92, 28);
+                clearData.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+                clearData.Click += delegate
+                {
+                    ClearLocalDataClicked(details);
+                };
+                dialog.Controls.Add(clearData);
 
                 Button close = new Button();
                 close.Text = "关闭";
@@ -1024,6 +1053,90 @@ namespace WeChatPlus.Shell
                 dialog.AcceptButton = close;
 
                 dialog.ShowDialog(this);
+            }
+        }
+
+        private void ShowPrivacyNotice()
+        {
+            SettingsSummary summary = SettingsSummaryService.Create(_dataRoot, AppDomain.CurrentDomain.BaseDirectory);
+            string notice = LocalDataClearService.GetPrivacyNoticeText();
+            try
+            {
+                File.WriteAllText(summary.PrivacyNoticePath, notice);
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic("privacy.notice", "Write privacy notice failed.", ex);
+            }
+
+            MessageBox.Show(notice, "隐私说明");
+        }
+
+        private void ClearLocalDataClicked(TextBox details)
+        {
+            DialogResult confirm = MessageBox.Show(
+                "将删除本机保存的账号备注、话术、授权缓存、隐私锁状态、开源组件声明和诊断日志。运行程序和助手组件不会被删除。是否继续？",
+                "清理本地数据",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                LocalDataClearResult result = LocalDataClearService.Clear(_dataRoot);
+                ClearLocalDataVisualState();
+                SettingsSummary summary = SettingsSummaryService.Create(_dataRoot, AppDomain.CurrentDomain.BaseDirectory);
+                details.Text =
+                    "本地数据清理：" + result.SummaryText + Environment.NewLine +
+                    "数据目录：" + summary.DataRoot + Environment.NewLine +
+                    FormatSettingsPath("账号数据", summary.AccountsPath) + Environment.NewLine +
+                    FormatSettingsPath("话术数据", summary.QuickRepliesPath) + Environment.NewLine +
+                    FormatSettingsPath("授权状态", summary.LicenseStatePath) + Environment.NewLine +
+                    FormatSettingsPath("隐私锁状态", summary.PrivacyLockPath) + Environment.NewLine +
+                    FormatSettingsPath("开源组件声明", summary.ComponentsPath) + Environment.NewLine +
+                    FormatSettingsPath("诊断日志", summary.DiagnosticsPath);
+                _workspaceStatus.Text = "本地数据已清理：" + result.RemovedEntries + " 项。";
+                MessageBox.Show("本地数据已清理：" + result.RemovedEntries + " 项。", "清理本地数据");
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic("privacy.clear-local-data", "Clear local data failed.", ex);
+                MessageBox.Show("清理本地数据失败：" + ex.Message, "清理本地数据");
+            }
+        }
+
+        private void ClearLocalDataVisualState()
+        {
+            _currentAccounts = new AccountRecord[0];
+            _currentReplies = new QuickReply[0];
+            if (_accountList != null)
+            {
+                _accountList.Items.Clear();
+                _accountList.Items.Add("待登录");
+            }
+            if (_categoryList != null)
+            {
+                _categoryList.Items.Clear();
+            }
+            if (_replyList != null)
+            {
+                _replyList.Items.Clear();
+            }
+            RefreshShortcutButtons();
+            if (_privacyLockOverlay != null)
+            {
+                _privacyLockOverlay.Visible = false;
+            }
+            if (_processStatus != null)
+            {
+                _processStatus.Visible = true;
+            }
+            if (_workspaceStatus != null)
+            {
+                _workspaceStatus.Visible = true;
             }
         }
 

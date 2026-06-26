@@ -56,6 +56,7 @@
     <Compile Include="Models\InstallerManifest.cs" />
     <Compile Include="Models\LicenseActivationResponse.cs" />
     <Compile Include="Models\LicenseState.cs" />
+    <Compile Include="Models\LocalDataClearResult.cs" />
     <Compile Include="Models\OpenSourceComponent.cs" />
     <Compile Include="Models\PrivacyLockState.cs" />
     <Compile Include="Models\QuickReply.cs" />
@@ -89,6 +90,7 @@
     <Compile Include="Services\LicenseActivationService.cs" />
     <Compile Include="Services\LicenseApiClient.cs" />
     <Compile Include="Services\LicenseFeaturePolicy.cs" />
+    <Compile Include="Services\LocalDataClearService.cs" />
     <Compile Include="Services\PrivacyLockService.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
     <Compile Include="Services\ReleasePackageValidator.cs" />

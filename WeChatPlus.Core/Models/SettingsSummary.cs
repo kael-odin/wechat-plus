@@ -18,6 +18,8 @@ namespace WeChatPlus.Core.Models
 
         public string PrivacyLockPath { get; set; }
 
+        public string PrivacyNoticePath { get; set; }
+
         public string ComponentsPath { get; set; }
 
         public string DiagnosticsPath { get; set; }

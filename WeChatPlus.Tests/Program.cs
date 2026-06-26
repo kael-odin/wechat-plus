@@ -48,6 +48,7 @@ namespace WeChatPlus.Tests
                 Run("creates diagnostics support package", CreatesDiagnosticsSupportPackage);
                 Run("builds diagnostics package directory", BuildsDiagnosticsPackageDirectory);
                 Run("builds settings summary", BuildsSettingsSummary);
+                Run("clears local user data files", ClearsLocalUserDataFiles);
                 Run("formats runtime environment checks", FormatsRuntimeEnvironmentChecks);
                 Run("persists privacy lock state", PersistsPrivacyLockState);
                 Run("changes privacy lock pin", ChangesPrivacyLockPin);
@@ -974,6 +975,33 @@ namespace WeChatPlus.Tests
             AssertContains(summary.QuickRepliesPath, "quick_replies.json", "settings replies path");
             AssertContains(summary.LicenseStatePath, "license_state.json", "settings license path");
             AssertContains(summary.PrivacyLockPath, "privacy_lock.json", "settings privacy path");
+            AssertContains(summary.PrivacyNoticePath, "privacy-notice.txt", "settings privacy notice path");
+        }
+
+        private static void ClearsLocalUserDataFiles()
+        {
+            string dataRoot = CreateTempRoot();
+            string nested = Path.Combine(dataRoot, "support");
+            Directory.CreateDirectory(nested);
+
+            File.WriteAllText(Path.Combine(dataRoot, "accounts.json"), "account");
+            File.WriteAllText(Path.Combine(dataRoot, "quick_replies.json"), "reply");
+            File.WriteAllText(Path.Combine(dataRoot, "reply_categories.json"), "category");
+            File.WriteAllText(Path.Combine(dataRoot, "license_state.json"), "license");
+            File.WriteAllText(Path.Combine(dataRoot, "privacy_lock.json"), "privacy");
+            File.WriteAllText(Path.Combine(dataRoot, "components.json"), "components");
+            File.WriteAllText(Path.Combine(dataRoot, "diagnostics.log"), "diagnostics");
+            File.WriteAllText(Path.Combine(nested, "support-report.txt"), "support");
+
+            LocalDataClearResult result = LocalDataClearService.Clear(dataRoot);
+
+            AssertTrue(result.Ok, "local data clear ok");
+            AssertTrue(Directory.Exists(dataRoot), "local data root remains");
+            AssertEqual("8", result.RemovedEntries.ToString(), "local data removed entries");
+            AssertTrue(!File.Exists(Path.Combine(dataRoot, "accounts.json")), "accounts removed");
+            AssertTrue(!File.Exists(Path.Combine(dataRoot, "quick_replies.json")), "replies removed");
+            AssertTrue(!Directory.Exists(nested), "nested support removed");
+            AssertContains(result.SummaryText, "removed 8 local data entries", "local data clear summary");
         }
 
         private static void FormatsRuntimeEnvironmentChecks()

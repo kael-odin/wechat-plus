@@ -19,6 +19,7 @@ namespace WeChatPlus.Core.Services
             summary.QuickRepliesPath = Path.Combine(data, "quick_replies.json");
             summary.LicenseStatePath = Path.Combine(data, "license_state.json");
             summary.PrivacyLockPath = Path.Combine(data, "privacy_lock.json");
+            summary.PrivacyNoticePath = Path.Combine(data, "privacy-notice.txt");
             summary.ComponentsPath = Path.Combine(data, "components.json");
             summary.DiagnosticsPath = Path.Combine(data, "diagnostics.log");
             return summary;

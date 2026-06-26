@@ -63,9 +63,10 @@ WeChat Plus 的商业化边界按以下方式设计：
 .\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe --plan
 .\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe
 .\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe --remove-registry
+.\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe --remove-user-data
 ```
 
-`WeChatPlus.Uninstall.exe` 使用 `InstallerManifest`/`UninstallPlanner` 生成清理计划，只删除清单列出的运行文件和快捷方式；默认保留用户数据目录且不删除注册表，只有显式传入 `--remove-registry` 时才删除 HKCU 卸载登记。后续完整安装器仍需补齐提权、更完整的数据清理 UI 和正式 MSI/EXE 打包流程。
+`WeChatPlus.Uninstall.exe` 使用 `InstallerManifest`/`UninstallPlanner` 生成清理计划，只删除清单列出的运行文件和快捷方式；默认保留用户数据目录且不删除注册表，只有显式传入 `--remove-registry` 时才删除 HKCU 卸载登记，显式传入 `--remove-user-data` 时才删除本地数据目录。后续完整安装器仍需补齐提权、更完整的数据清理 UI 和正式 MSI/EXE 打包流程。
 
 注意：直接构建原始 `RevokeMsgPatcher.sln` 在当前机器上会因为缺少对应 Targeting Pack、NuGet 包和旧 MSBuild 编译能力出现错误；新的 MVP 工作集中在 `WeChatPlus.sln`。
 
@@ -82,11 +83,11 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance embed --handle <hWnd> --parent <hWnd>`、`multi-instance detach --handle <hWnd>`、`multi-instance focus --handle <hWnd>`、`multi-instance close --pid <pid>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
 - 运行环境检查：商用壳启动和设置页可展示管理员权限、助手组件可用性、微信安装路径和当前微信进程数；微信安装路径由独立助手组件通过 `multi-instance status` 返回。
 - 更新检查：商用壳会先尝试拉取预留云端 `update-manifest.json`，失败时回退运行目录本地清单，比较主程序和助手组件版本并展示更新状态；如果清单提供 `helperSha256`，会对当前 `WeChatPlus.OpenHelper.exe` 做 SHA-256 完整性校验；当前使用占位云端地址，不包含真实更新密钥。
-- 设置页：商用壳可只读展示运行环境检查、运行包校验结果、缺失必需文件、数据目录、运行目录、助手组件、更新清单、账号、话术、授权、隐私锁、开源组件声明和诊断日志路径及存在状态，便于定位运行包和本地数据问题。
+- 设置页：商用壳可展示运行环境检查、运行包校验结果、缺失必需文件、数据目录、运行目录、助手组件、更新清单、账号、话术、授权、隐私锁、隐私说明、开源组件声明和诊断日志路径及存在状态，并提供隐私说明查看和本地数据清理入口；清理动作只删除账号备注、话术、授权缓存、隐私锁状态、组件声明和诊断日志，不删除运行程序。
 - 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭选中微信进程、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口、诊断入口可生成脱敏支持包。
 - 构建输出：商用壳会把独立助手组件、中立 Core、GPLv3 `LICENSE`、`README.md`、`components.json` 和 `update-manifest.json` 复制到自身输出目录，形成最小 MVP 运行包。
 - 安装清单：Core 提供默认安装目录、开始菜单快捷方式、卸载入口、卸载注册表键、运行包文件移除列表、默认保留用户数据策略和 GPL 助手源码地址等结构化元数据，供安装器/打包器消费；当前安装入口已支持真实 `.lnk` 创建、显式 HKCU 卸载登记写入/删除和失败回滚，但还不是完整 MSI/EXE 安装器。
-- 测试：命令解析、JSON 输出、助手版本/运行环境/窗口 JSON 解析、工作区聚焦状态文案、诊断日志写入/导出、脱敏诊断包生成和导出目录命名、话术种子/搜索/常用短语、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除/排序/离线同步、隐私锁状态持久化和自定义 PIN、开源组件声明、运行包清单、安装清单、运行包文件校验、助手 SHA-256 校验、设置摘要、运行环境检查、试用/本地激活授权状态、云端激活响应解析/持久化、云端激活传输编排、云端更新清单加载/本地回退、授权功能限制、试用版话术数量限制和更新清单状态。
+- 测试：命令解析、JSON 输出、助手版本/运行环境/窗口 JSON 解析、工作区聚焦状态文案、诊断日志写入/导出、脱敏诊断包生成和导出目录命名、话术种子/搜索/常用短语、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除/排序/离线同步、隐私锁状态持久化和自定义 PIN、本地数据清理、开源组件声明、运行包清单、安装清单、运行包文件校验、助手 SHA-256 校验、设置摘要、运行环境检查、试用/本地激活授权状态、云端激活响应解析/持久化、云端激活传输编排、云端更新清单加载/本地回退、授权功能限制、试用版话术数量限制和更新清单状态。
 
 下一步：
 
