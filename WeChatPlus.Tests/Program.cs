@@ -22,6 +22,7 @@ namespace WeChatPlus.Tests
                 Run("imports exported quick reply json", ImportsExportedQuickReplyJson);
                 Run("imports quick reply csv", ImportsQuickReplyCsv);
                 Run("persists account records", PersistsAccountRecords);
+                Run("renames and deletes account records", RenamesAndDeletesAccountRecords);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
@@ -116,6 +117,26 @@ namespace WeChatPlus.Tests
             AccountRecord updated = reloaded.GetAll()[0];
             AssertEqual("Offline", updated.Status, "updated account status");
             AssertEqual("0", updated.ProcessId.ToString(), "updated process id");
+        }
+
+        private static void RenamesAndDeletesAccountRecords()
+        {
+            string root = CreateTempRoot();
+            AccountRepository repository = new AccountRepository(root);
+            AccountRecord first = repository.UpsertFromProcess(3001, "微信一号", "Ready");
+            AccountRecord second = repository.UpsertFromProcess(3002, "微信二号", "Ready");
+
+            bool renamed = repository.UpdateDisplayName(first.Id, "售前客服");
+            repository.Delete(second.Id);
+
+            AccountRepository reloaded = new AccountRepository(root);
+            AccountRecord[] accounts = reloaded.GetAll();
+
+            AssertTrue(renamed, "rename result");
+            AssertEqual("1", accounts.Length.ToString(), "remaining account count");
+            AssertEqual(first.Id, accounts[0].Id, "remaining account id");
+            AssertEqual("售前客服", accounts[0].DisplayName, "renamed account");
+            AssertTrue(!reloaded.UpdateDisplayName("missing-account", "无效账号"), "missing rename result");
         }
 
         private static void BuildsLicenseActivationRequest()

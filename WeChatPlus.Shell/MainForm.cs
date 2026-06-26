@@ -149,9 +149,17 @@ namespace WeChatPlus.Shell
             splitButton.Click += delegate { _workspaceStatus.Text = "拆分窗口将在窗口嵌入能力完成后启用。"; };
             rail.Controls.Add(splitButton);
 
+            Button renameButton = RailButton("备", "备注", 240);
+            renameButton.Click += RenameAccountClicked;
+            rail.Controls.Add(renameButton);
+
+            Button deleteButton = RailButton("删", "删除", 314);
+            deleteButton.Click += DeleteAccountClicked;
+            rail.Controls.Add(deleteButton);
+
             _accountList = new ListBox();
-            _accountList.Location = new Point(8, 248);
-            _accountList.Size = new Size(76, 360);
+            _accountList.Location = new Point(8, 388);
+            _accountList.Size = new Size(76, 220);
             _accountList.BorderStyle = BorderStyle.None;
             _accountList.SelectedIndexChanged += AccountSelectionChanged;
             rail.Controls.Add(_accountList);
@@ -712,6 +720,71 @@ namespace WeChatPlus.Shell
             {
                 MessageBox.Show("关闭微信失败：" + ex.Message, "关闭微信");
             }
+        }
+
+        private void RenameAccountClicked(object sender, EventArgs e)
+        {
+            AccountListItem item = _accountList.SelectedItem as AccountListItem;
+            if (item == null)
+            {
+                _workspaceStatus.Text = "请先选择要备注的账号。";
+                return;
+            }
+
+            using (Form editor = new Form())
+            {
+                editor.Text = "编辑账号备注";
+                editor.Size = new Size(360, 150);
+                editor.StartPosition = FormStartPosition.CenterParent;
+
+                TextBox name = new TextBox();
+                name.Location = new Point(16, 18);
+                name.Size = new Size(310, 23);
+                name.Text = item.Account.DisplayName;
+                editor.Controls.Add(name);
+
+                Button save = new Button();
+                save.Text = "保存";
+                save.Location = new Point(246, 58);
+                save.DialogResult = DialogResult.OK;
+                editor.Controls.Add(save);
+                editor.AcceptButton = save;
+
+                if (editor.ShowDialog(this) != DialogResult.OK)
+                {
+                    return;
+                }
+
+                if (_accountRepository.UpdateDisplayName(item.Account.Id, name.Text))
+                {
+                    RefreshAccounts();
+                    SelectAccount(item.Account.Id);
+                    _workspaceStatus.Text = "账号备注已更新：" + name.Text.Trim();
+                    return;
+                }
+
+                _workspaceStatus.Text = "账号备注更新失败。";
+            }
+        }
+
+        private void DeleteAccountClicked(object sender, EventArgs e)
+        {
+            AccountListItem item = _accountList.SelectedItem as AccountListItem;
+            if (item == null)
+            {
+                _workspaceStatus.Text = "请先选择要删除的本地账号记录。";
+                return;
+            }
+
+            DialogResult result = MessageBox.Show("删除本地账号记录“" + item.Account.DisplayName + "”？这不会关闭微信进程。", "删除账号记录", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+            if (result != DialogResult.OK)
+            {
+                return;
+            }
+
+            _accountRepository.Delete(item.Account.Id);
+            RefreshAccounts();
+            _workspaceStatus.Text = "本地账号记录已删除：" + item.Account.DisplayName;
         }
 
         private void AccountSelectionChanged(object sender, EventArgs e)

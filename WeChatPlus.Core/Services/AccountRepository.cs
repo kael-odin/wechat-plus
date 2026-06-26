@@ -86,6 +86,26 @@ namespace WeChatPlus.Core.Services
             Save(accounts.ToArray());
         }
 
+        public bool UpdateDisplayName(string id, string displayName)
+        {
+            if (string.IsNullOrEmpty(id) || string.IsNullOrWhiteSpace(displayName))
+            {
+                return false;
+            }
+
+            List<AccountRecord> accounts = new List<AccountRecord>(GetAll());
+            AccountRecord record = accounts.FirstOrDefault(x => string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (record == null)
+            {
+                return false;
+            }
+
+            record.DisplayName = displayName.Trim();
+            record.UpdatedAtUtc = DateTime.UtcNow;
+            Save(accounts.ToArray());
+            return true;
+        }
+
         public void Delete(string id)
         {
             if (string.IsNullOrEmpty(id))
