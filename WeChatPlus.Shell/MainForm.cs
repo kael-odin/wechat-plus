@@ -954,22 +954,23 @@ namespace WeChatPlus.Shell
                 return;
             }
 
-            string status = "当前账号：" + item.Account.DisplayName + " / 状态：" + item.Account.Status + " / PID：" + item.Account.ProcessId;
             if (File.Exists(_helperPath) && !string.IsNullOrWhiteSpace(item.Account.WindowHandle))
             {
                 try
                 {
                     HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
                     string output = client.Run("multi-instance focus --handle " + item.Account.WindowHandle);
-                    status = status + " / 聚焦：" + TrimForStatus(output);
+                    _workspaceStatus.Text = WorkspaceStatusFormatter.FormatFocusMode(item.Account, ExtractBool(output, "focused") ? "成功" : "失败", output);
+                    return;
                 }
                 catch (Exception ex)
                 {
-                    status = status + " / 聚焦失败：" + ex.Message;
+                    _workspaceStatus.Text = WorkspaceStatusFormatter.FormatFocusFailure(item.Account, ex.Message);
+                    return;
                 }
             }
 
-            _workspaceStatus.Text = status;
+            _workspaceStatus.Text = WorkspaceStatusFormatter.FormatFocusMode(item.Account, false, string.Empty);
         }
 
         private void SelectAccount(string id)

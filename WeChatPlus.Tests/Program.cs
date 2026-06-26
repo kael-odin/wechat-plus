@@ -27,6 +27,7 @@ namespace WeChatPlus.Tests
                 Run("preserves account remarks on process refresh", PreservesAccountRemarksOnProcessRefresh);
                 Run("marks missing account processes offline", MarksMissingAccountProcessesOffline);
                 Run("reorders account records", ReordersAccountRecords);
+                Run("formats fallback workspace focus status", FormatsFallbackWorkspaceFocusStatus);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
@@ -236,6 +237,27 @@ namespace WeChatPlus.Tests
             AssertEqual(first.Id, accounts[1].Id, "second after reorder");
             AssertEqual(second.Id, accounts[2].Id, "third after reorder");
             AssertTrue(!reloaded.MoveAccount(second.Id, 1), "move last down result");
+        }
+
+        private static void FormatsFallbackWorkspaceFocusStatus()
+        {
+            AccountRecord account = new AccountRecord();
+            account.DisplayName = "售前客服";
+            account.Status = "Detected";
+            account.ProcessId = 6001;
+            account.WindowHandle = "123456";
+
+            string focused = WorkspaceStatusFormatter.FormatFocusMode(account, "成功", "{\"ok\":true,\"data\":{\"focused\":true}}");
+            string notFocused = WorkspaceStatusFormatter.FormatFocusMode(account, "失败", "{\"ok\":true,\"data\":{\"focused\":false}}");
+            string unavailable = WorkspaceStatusFormatter.FormatFocusMode(account, false, string.Empty);
+
+            AssertContains(focused, "非嵌入聚焦模式", "focus mode label");
+            AssertContains(focused, "售前客服", "focus account");
+            AssertContains(focused, "PID：6001", "focus pid");
+            AssertContains(focused, "窗口句柄：123456", "focus handle");
+            AssertContains(focused, "聚焦：成功", "focus result");
+            AssertContains(notFocused, "聚焦：失败", "not focused result");
+            AssertContains(unavailable, "聚焦：未执行", "unavailable focus result");
         }
 
         private static void BuildsLicenseActivationRequest()

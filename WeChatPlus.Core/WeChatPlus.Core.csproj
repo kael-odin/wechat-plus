@@ -56,6 +56,7 @@
     <Compile Include="Services\LicenseApiClient.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
     <Compile Include="Services\TrialLicenseService.cs" />
+    <Compile Include="Services\WorkspaceStatusFormatter.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
