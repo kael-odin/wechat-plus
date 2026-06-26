@@ -59,7 +59,8 @@ namespace WeChatPlus.OpenHelper
             if (string.Equals(command.Action, "status", StringComparison.OrdinalIgnoreCase))
             {
                 HelperCommandResult result = HelperCommandResult.Success("multi-instance status");
-                result.Data["processCount"] = WeChatService.CountProcesses();
+                System.Diagnostics.Process[] processes = WeChatService.GetProcesses();
+                result.Data["processCount"] = processes.Length;
                 result.Data["installPath"] = WeChatService.FindInstallPath();
                 return result;
             }
@@ -83,6 +84,15 @@ namespace WeChatPlus.OpenHelper
                 HelperCommandResult result = HelperCommandResult.Success("multi-instance close-mutex");
                 result.Data["processId"] = processId;
                 result.Data["closed"] = closed;
+                return result;
+            }
+
+            if (string.Equals(command.Action, "close-all-mutex", StringComparison.OrdinalIgnoreCase))
+            {
+                int closed = WeChatService.CloseAllMutexes();
+                HelperCommandResult result = HelperCommandResult.Success("multi-instance close-all-mutex");
+                result.Data["closedCount"] = closed;
+                result.Data["processCount"] = WeChatService.CountProcesses();
                 return result;
             }
 

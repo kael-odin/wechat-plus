@@ -23,7 +23,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 商用壳通过进程边界调用助手组件，不复制、不链接 GPLv3 源码。
 - 如果后续把 RevokeMsgPatcher 的 GPLv3 多开/补丁实现迁入助手组件，助手组件对应修改源码必须公开，并在产品内展示许可证和源码地址。
 
-当前 `WeChatPlus.OpenHelper` 已提供 JSON CLI 边界和安全的状态/版本命令；`multi-instance start` 会尝试启动本机微信，`close-mutex` 已保留独立助手命令入口，等待后续在开源助手仓库中接入 GPL 合规实现。
+当前 `WeChatPlus.OpenHelper` 已提供 JSON CLI 边界和多开助手命令；`multi-instance start` 会先尝试关闭已有微信实例互斥句柄再启动本机微信，`close-mutex` 和 `close-all-mutex` 都在独立助手组件内执行。
 
 ## 构建与验证
 
@@ -51,15 +51,14 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 三栏工作台 UI：账号栏、微信工作区占位、右侧快捷话术栏、顶部会员/开源声明入口、底部截图入口。
 - 本地话术库：默认分类、默认话术、搜索、新增、复制、JSON 导入导出、CSV 导入。
 - 试用授权状态：设备哈希、试用期、离线宽限期。
-- 助手组件：`version --json`、`multi-instance status`、`patch status --app wechat`。
+- 助手组件：`version --json`、`multi-instance status`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
+- 工作台工具：微信进程状态刷新、截图到剪贴板、截图时隐藏当前窗口。
 - 构建输出：商用壳会把独立助手组件复制到自身输出目录，便于进程边界调用。
 - 测试：命令解析、JSON 输出、话术种子/搜索、JSON/CSV 导入、试用授权状态。
 
 下一步：
 
-- 在独立开源助手组件中接入真实微信互斥句柄关闭逻辑，并公开对应源码。
 - 为商用壳增加微信窗口枚举、聚焦和嵌入/降级聚焦模式。
-- 接入真实截图流程。
 - 增加授权 API 客户端和安装器。
 
 ---

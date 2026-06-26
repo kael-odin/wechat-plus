@@ -11,6 +11,11 @@ namespace WeChatPlus.OpenHelper.MultiInstance
             return Process.GetProcessesByName("WeChat").Length;
         }
 
+        public Process[] GetProcesses()
+        {
+            return Process.GetProcessesByName("WeChat");
+        }
+
         public string FindInstallPath()
         {
             string[] registryPaths =
@@ -45,6 +50,7 @@ namespace WeChatPlus.OpenHelper.MultiInstance
 
         public int StartWeChat()
         {
+            CloseAllMutexes();
             string installPath = FindInstallPath();
             string executable = string.IsNullOrEmpty(installPath)
                 ? "WeChat.exe"
@@ -56,11 +62,19 @@ namespace WeChatPlus.OpenHelper.MultiInstance
 
         public bool CloseMutex(int processId)
         {
-            // The MVP keeps GPL-sensitive mutex-closing implementation behind this
-            // separate helper boundary. A later open-helper iteration can replace
-            // this stub with the GPL-derived implementation and publish source.
-            Process.GetProcessById(processId);
-            return false;
+            Process process = Process.GetProcessById(processId);
+            return MutexHandleCloser.CloseWeChatMutexes(process) > 0;
+        }
+
+        public int CloseAllMutexes()
+        {
+            int closed = 0;
+            Process[] processes = GetProcesses();
+            for (int i = 0; i < processes.Length; i++)
+            {
+                closed += MutexHandleCloser.CloseWeChatMutexes(processes[i]);
+            }
+            return closed;
         }
 
         private static string ReadInstallPath(RegistryKey key)

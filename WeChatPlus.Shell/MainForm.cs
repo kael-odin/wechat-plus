@@ -22,6 +22,7 @@ namespace WeChatPlus.Shell
         private TextBox _searchBox;
         private Label _helperStatus;
         private Label _workspaceStatus;
+        private Label _processStatus;
         private CheckBox _hideForScreenshot;
         private TableLayoutPanel _mainLayout;
         private Control _rightPanel;
@@ -176,6 +177,13 @@ namespace WeChatPlus.Shell
             canvas.BorderStyle = BorderStyle.FixedSingle;
             workspace.Controls.Add(canvas);
 
+            _processStatus = new Label();
+            _processStatus.Text = "微信进程：未刷新";
+            _processStatus.ForeColor = Color.FromArgb(80, 88, 96);
+            _processStatus.AutoSize = true;
+            _processStatus.Location = new Point(14, 14);
+            canvas.Controls.Add(_processStatus);
+
             _workspaceStatus = new Label();
             _workspaceStatus.Text = "微信窗口承载区：点击左侧添加账号启动微信；窗口嵌入将在后续迭代接入。";
             _workspaceStatus.ForeColor = Color.FromArgb(80, 88, 96);
@@ -197,6 +205,13 @@ namespace WeChatPlus.Shell
             screenshotButton.Location = new Point(10, 9);
             screenshotButton.Click += ScreenshotClicked;
             bottom.Controls.Add(screenshotButton);
+
+            Button refreshButton = new Button();
+            refreshButton.Text = "刷新进程";
+            refreshButton.Size = new Size(110, 32);
+            refreshButton.Location = new Point(260, 9);
+            refreshButton.Click += delegate { RefreshWeChatProcessStatus(); };
+            bottom.Controls.Add(refreshButton);
 
             _hideForScreenshot = new CheckBox();
             _hideForScreenshot.Text = "截图时隐藏当前窗口";
@@ -305,6 +320,7 @@ namespace WeChatPlus.Shell
                 HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
                 string json = client.Run("version --json");
                 _helperStatus.Text = "助手组件：可用 " + TrimForStatus(json);
+                RefreshWeChatProcessStatus();
             }
             catch (Exception ex)
             {
@@ -323,9 +339,11 @@ namespace WeChatPlus.Shell
             try
             {
                 HelperProcessClient client = new HelperProcessClient(_helperPath, 10000);
+                client.Run("multi-instance close-all-mutex");
                 string output = client.Run("multi-instance start");
                 _accountList.Items.Add("微信实例 " + DateTime.Now.ToString("HH:mm:ss"));
                 _workspaceStatus.Text = "已调用助手组件启动微信：" + TrimForStatus(output);
+                RefreshWeChatProcessStatus();
             }
             catch (Exception ex)
             {
@@ -420,14 +438,39 @@ namespace WeChatPlus.Shell
         private void ScreenshotClicked(object sender, EventArgs e)
         {
             bool hide = _hideForScreenshot.Checked;
-            if (hide)
+            FormWindowState originalState = WindowState;
+            try
             {
-                WindowState = FormWindowState.Minimized;
+                if (hide)
+                {
+                    WindowState = FormWindowState.Minimized;
+                    Application.DoEvents();
+                    System.Threading.Thread.Sleep(200);
+                }
+
+                Rectangle bounds = Screen.PrimaryScreen.Bounds;
+                using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
+                {
+                    using (Graphics graphics = Graphics.FromImage(bitmap))
+                    {
+                        graphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
+                    }
+                    Clipboard.SetImage(bitmap);
+                }
+
+                _workspaceStatus.Text = "截图已复制到剪贴板。";
             }
-            MessageBox.Show("截图工具入口已就绪：下一阶段接入系统截图流程。", "截图工具");
-            if (hide)
+            catch (Exception ex)
             {
-                WindowState = FormWindowState.Normal;
+                MessageBox.Show("截图失败：" + ex.Message, "截图工具");
+            }
+            finally
+            {
+                if (hide)
+                {
+                    WindowState = originalState;
+                    Activate();
+                }
             }
         }
 
@@ -457,6 +500,31 @@ namespace WeChatPlus.Shell
             _rightPanel.Visible = !_rightPanelCollapsed;
             _mainLayout.ColumnStyles[2].Width = _rightPanelCollapsed ? 0 : 292;
             _workspaceStatus.Text = _rightPanelCollapsed ? "右侧话术栏已收起。" : "右侧话术栏已展开。";
+        }
+
+        private void RefreshWeChatProcessStatus()
+        {
+            if (_processStatus == null)
+            {
+                return;
+            }
+
+            if (!File.Exists(_helperPath))
+            {
+                _processStatus.Text = "微信进程：助手组件未找到";
+                return;
+            }
+
+            try
+            {
+                HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
+                string json = client.Run("multi-instance status");
+                _processStatus.Text = "微信进程状态：" + TrimForStatus(json);
+            }
+            catch (Exception ex)
+            {
+                _processStatus.Text = "微信进程状态：刷新失败 " + ex.Message;
+            }
         }
 
         private static string TrimForStatus(string value)

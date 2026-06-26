@@ -37,6 +37,7 @@
     <Reference Include="System.Web.Extensions" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MultiInstance\MutexHandleCloser.cs" />
     <Compile Include="MultiInstance\WeChatProcessService.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
