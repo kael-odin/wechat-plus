@@ -53,6 +53,7 @@
     <Compile Include="Models\InstallRegistration.cs" />
     <Compile Include="Models\InstallResult.cs" />
     <Compile Include="Models\InstallerManifest.cs" />
+    <Compile Include="Models\LicenseActivationResponse.cs" />
     <Compile Include="Models\LicenseState.cs" />
     <Compile Include="Models\OpenSourceComponent.cs" />
     <Compile Include="Models\PrivacyLockState.cs" />

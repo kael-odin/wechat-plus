@@ -68,6 +68,28 @@ namespace WeChatPlus.Core.Services
             return state;
         }
 
+        public LicenseState ApplyCloudActivation(LicenseActivationResponse response)
+        {
+            LicenseState state = GetOrCreateTrial();
+            if (response == null || !response.Ok)
+            {
+                File.WriteAllText(_licensePath, _serializer.Serialize(state));
+                return state;
+            }
+
+            DateTime now = DateTime.UtcNow;
+            state.LicenseKeyMasked = string.IsNullOrWhiteSpace(response.LicenseKeyMasked)
+                ? state.LicenseKeyMasked
+                : response.LicenseKeyMasked.Trim();
+            state.Plan = string.IsNullOrWhiteSpace(response.Plan) ? "personal" : response.Plan.Trim();
+            state.ExpiresAtUtc = response.ExpiresAtUtc <= now ? now.AddDays(365) : response.ExpiresAtUtc;
+            state.LastVerifiedAtUtc = now;
+            state.OfflineGraceUntilUtc = response.OfflineGraceUntilUtc <= now ? now.AddDays(45) : response.OfflineGraceUntilUtc;
+
+            File.WriteAllText(_licensePath, _serializer.Serialize(state));
+            return state;
+        }
+
         public static string MaskLicenseKey(string licenseKey)
         {
             if (string.IsNullOrWhiteSpace(licenseKey))

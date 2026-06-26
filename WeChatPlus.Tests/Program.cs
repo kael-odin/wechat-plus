@@ -52,6 +52,8 @@ namespace WeChatPlus.Tests
                 Run("applies local license activation", AppliesLocalLicenseActivation);
                 Run("enforces trial feature limits", EnforcesTrialFeatureLimits);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
+                Run("applies cloud license activation response", AppliesCloudLicenseActivationResponse);
+                Run("keeps license state when cloud activation fails", KeepsLicenseStateWhenCloudActivationFails);
                 Run("parses update manifest and formats status", ParsesUpdateManifestAndFormatsStatus);
                 Run("verifies helper sha256 from update manifest", VerifiesHelperSha256FromUpdateManifest);
                 Console.WriteLine("All tests passed: " + _passed);
@@ -663,6 +665,50 @@ namespace WeChatPlus.Tests
             AssertContains(request.BodyJson, "\"licenseKey\":\"ABC-123-SECRET\"", "license key body");
             AssertContains(request.BodyJson, "\"deviceIdHash\":\"" + state.DeviceIdHash + "\"", "device hash body");
             AssertContains(request.BodyJson, "\"product\":\"wechat-plus\"", "product body");
+        }
+
+        private static void AppliesCloudLicenseActivationResponse()
+        {
+            string root = CreateTempRoot();
+            TrialLicenseService service = new TrialLicenseService(root);
+            LicenseState trial = service.GetOrCreateTrial();
+            string responseJson = "{\"ok\":true,\"licenseKeyMasked\":\"CLOUD...9999\",\"plan\":\"professional\",\"expiresAtUtc\":\"2030-01-02T03:04:05Z\",\"offlineGraceUntilUtc\":\"2030-02-02T03:04:05Z\",\"message\":\"activated\"}";
+
+            LicenseActivationResponse response = LicenseActivationResponse.Parse(responseJson);
+            LicenseState activated = service.ApplyCloudActivation(response);
+
+            AssertTrue(response.Ok, "cloud response ok");
+            AssertEqual("professional", activated.Plan, "cloud activated plan");
+            AssertEqual("CLOUD...9999", activated.LicenseKeyMasked, "cloud masked key");
+            AssertEqual("2030-01-02T03:04:05.0000000Z", activated.ExpiresAtUtc.ToString("o"), "cloud expiry");
+            AssertEqual("2030-02-02T03:04:05.0000000Z", activated.OfflineGraceUntilUtc.ToString("o"), "cloud offline grace");
+            AssertEqual(trial.DeviceIdHash, activated.DeviceIdHash, "cloud keeps device hash");
+
+            TrialLicenseService reloaded = new TrialLicenseService(root);
+            LicenseState persisted = reloaded.GetOrCreateTrial();
+            AssertEqual("professional", persisted.Plan, "cloud persisted plan");
+            AssertEqual("CLOUD...9999", persisted.LicenseKeyMasked, "cloud persisted masked key");
+        }
+
+        private static void KeepsLicenseStateWhenCloudActivationFails()
+        {
+            string root = CreateTempRoot();
+            TrialLicenseService service = new TrialLicenseService(root);
+            LicenseState local = service.ApplyActivation("LOCAL-123-SECRET", "personal", DateTime.UtcNow.AddDays(365));
+            string responseJson = "{\"ok\":false,\"message\":\"device limit reached\",\"plan\":\"trial\",\"licenseKeyMasked\":\"BAD\"}";
+
+            LicenseActivationResponse response = LicenseActivationResponse.Parse(responseJson);
+            LicenseState unchanged = service.ApplyCloudActivation(response);
+
+            AssertTrue(!response.Ok, "cloud response failed");
+            AssertEqual("device limit reached", response.Message, "cloud response message");
+            AssertEqual(local.Plan, unchanged.Plan, "failed cloud keeps plan");
+            AssertEqual(local.LicenseKeyMasked, unchanged.LicenseKeyMasked, "failed cloud keeps key");
+
+            TrialLicenseService reloaded = new TrialLicenseService(root);
+            LicenseState persisted = reloaded.GetOrCreateTrial();
+            AssertEqual(local.Plan, persisted.Plan, "failed cloud persisted plan");
+            AssertEqual(local.LicenseKeyMasked, persisted.LicenseKeyMasked, "failed cloud persisted key");
         }
 
         private static void ParsesUpdateManifestAndFormatsStatus()
