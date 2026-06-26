@@ -93,19 +93,21 @@ namespace WeChatPlus.Shell
 
             _helperStatus = new Label();
             _helperStatus.AutoSize = false;
-            _helperStatus.Size = new Size(350, 20);
+            _helperStatus.Size = new Size(300, 20);
             _helperStatus.ForeColor = Color.FromArgb(80, 80, 80);
             _helperStatus.Location = new Point(190, 18);
             top.Controls.Add(_helperStatus);
 
-            Button memberButton = TopButton("会员", 560, ShowMemberState);
-            Button updateButton = TopButton("检查更新", 645, CheckUpdatesClicked);
-            Button noticeButton = TopButton("开源声明", 750, ShowOpenSourceNotice);
-            Button refreshButton = TopButton("刷新助手", 855, delegate { RefreshHelperStatus(); });
-            Button diagnosticsButton = TopButton("诊断", 960, ExportDiagnosticsClicked);
-            Button collapseButton = TopButton("收起侧栏", 1065, delegate { ToggleRightPanel(); });
+            Button memberButton = TopButton("会员", 510, ShowMemberState);
+            Button settingsButton = TopButton("设置", 595, ShowSettings);
+            Button updateButton = TopButton("检查更新", 680, CheckUpdatesClicked);
+            Button noticeButton = TopButton("开源声明", 765, ShowOpenSourceNotice);
+            Button refreshButton = TopButton("刷新助手", 850, delegate { RefreshHelperStatus(); });
+            Button diagnosticsButton = TopButton("诊断", 935, ExportDiagnosticsClicked);
+            Button collapseButton = TopButton("收起侧栏", 1020, delegate { ToggleRightPanel(); });
 
             top.Controls.Add(memberButton);
+            top.Controls.Add(settingsButton);
             top.Controls.Add(updateButton);
             top.Controls.Add(noticeButton);
             top.Controls.Add(refreshButton);
@@ -118,7 +120,7 @@ namespace WeChatPlus.Shell
         {
             Button button = new Button();
             button.Text = text;
-            button.Size = new Size(90, 28);
+            button.Size = new Size(82, 28);
             button.Location = new Point(left, 13);
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderColor = Color.FromArgb(210, 216, 222);
@@ -881,6 +883,72 @@ namespace WeChatPlus.Shell
 
                 dialog.ShowDialog(this);
             }
+        }
+
+        private void ShowSettings(object sender, EventArgs e)
+        {
+            SettingsSummary summary = SettingsSummaryService.Create(_dataRoot, AppDomain.CurrentDomain.BaseDirectory);
+            using (Form dialog = new Form())
+            {
+                dialog.Text = "设置";
+                dialog.Size = new Size(760, 520);
+                dialog.MinimumSize = new Size(640, 420);
+                dialog.StartPosition = FormStartPosition.CenterParent;
+
+                Label title = new Label();
+                title.AutoSize = true;
+                title.Font = new Font(Font, FontStyle.Bold);
+                title.Location = new Point(16, 16);
+                title.Text = "运行环境与本地数据";
+                dialog.Controls.Add(title);
+
+                TextBox details = new TextBox();
+                details.Location = new Point(16, 48);
+                details.Size = new Size(710, 370);
+                details.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+                details.Multiline = true;
+                details.ReadOnly = true;
+                details.ScrollBars = ScrollBars.Both;
+                details.WordWrap = false;
+                details.Text =
+                    "数据目录：" + summary.DataRoot + Environment.NewLine +
+                    "运行目录：" + summary.RuntimeRoot + Environment.NewLine +
+                    Environment.NewLine +
+                    FormatSettingsPath("助手组件", summary.HelperPath) + Environment.NewLine +
+                    FormatSettingsPath("更新清单", summary.UpdateManifestPath) + Environment.NewLine +
+                    FormatSettingsPath("账号数据", summary.AccountsPath) + Environment.NewLine +
+                    FormatSettingsPath("话术数据", summary.QuickRepliesPath) + Environment.NewLine +
+                    FormatSettingsPath("授权状态", summary.LicenseStatePath) + Environment.NewLine +
+                    FormatSettingsPath("隐私锁状态", summary.PrivacyLockPath) + Environment.NewLine +
+                    FormatSettingsPath("开源组件声明", summary.ComponentsPath) + Environment.NewLine +
+                    FormatSettingsPath("诊断日志", summary.DiagnosticsPath);
+                dialog.Controls.Add(details);
+
+                Label note = new Label();
+                note.Location = new Point(16, 428);
+                note.Size = new Size(560, 32);
+                note.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+                note.ForeColor = Color.FromArgb(80, 88, 96);
+                note.Text = "当前设置页只读展示关键路径，便于排查运行包、助手组件和本地数据文件。";
+                dialog.Controls.Add(note);
+
+                Button close = new Button();
+                close.Text = "关闭";
+                close.Location = new Point(634, 426);
+                close.Size = new Size(92, 28);
+                close.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+                close.DialogResult = DialogResult.OK;
+                dialog.Controls.Add(close);
+                dialog.AcceptButton = close;
+
+                dialog.ShowDialog(this);
+            }
+        }
+
+        private static string FormatSettingsPath(string label, string path)
+        {
+            string status = File.Exists(path) ? "存在" : "未找到";
+            return label + "（" + status + "）：" + path;
         }
 
         private void ShowOpenSourceNotice(object sender, EventArgs e)

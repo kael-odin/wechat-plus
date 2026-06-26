@@ -34,6 +34,7 @@ namespace WeChatPlus.Tests
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
                 Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
+                Run("builds settings summary", BuildsSettingsSummary);
                 Run("persists privacy lock state", PersistsPrivacyLockState);
                 Run("creates trial license state", CreatesTrialLicenseState);
                 Run("applies local license activation", AppliesLocalLicenseActivation);
@@ -430,6 +431,23 @@ namespace WeChatPlus.Tests
             AssertContains(log, "InvalidOperationException", "diagnostics exception type");
             AssertContains(log, "missing helper", "diagnostics exception message");
             AssertEqual(log, exported, "exported diagnostics content");
+        }
+
+        private static void BuildsSettingsSummary()
+        {
+            string dataRoot = CreateTempRoot();
+            string runtimeRoot = CreateTempRoot();
+
+            SettingsSummary summary = SettingsSummaryService.Create(dataRoot, runtimeRoot);
+
+            AssertEqual(dataRoot, summary.DataRoot, "settings data root");
+            AssertEqual(runtimeRoot, summary.RuntimeRoot, "settings runtime root");
+            AssertContains(summary.HelperPath, "WeChatPlus.OpenHelper.exe", "settings helper path");
+            AssertContains(summary.UpdateManifestPath, "update-manifest.json", "settings update manifest");
+            AssertContains(summary.AccountsPath, "accounts.json", "settings accounts path");
+            AssertContains(summary.QuickRepliesPath, "quick_replies.json", "settings replies path");
+            AssertContains(summary.LicenseStatePath, "license_state.json", "settings license path");
+            AssertContains(summary.PrivacyLockPath, "privacy_lock.json", "settings privacy path");
         }
 
         private static void PersistsPrivacyLockState()
