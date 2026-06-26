@@ -16,6 +16,7 @@ namespace WeChatPlus.Tests
             {
                 Run("parses helper commands", ParsesHelperCommands);
                 Run("serializes helper result", SerializesHelperResult);
+                Run("parses helper version result", ParsesHelperVersionResult);
                 Run("parses helper window results", ParsesHelperWindowResults);
                 Run("seeds and searches quick replies", SeedsAndSearchesQuickReplies);
                 Run("updates quick replies by id", UpdatesQuickRepliesById);
@@ -36,6 +37,7 @@ namespace WeChatPlus.Tests
                 Run("applies local license activation", AppliesLocalLicenseActivation);
                 Run("enforces trial feature limits", EnforcesTrialFeatureLimits);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
+                Run("parses update manifest and formats status", ParsesUpdateManifestAndFormatsStatus);
                 Console.WriteLine("All tests passed: " + _passed);
                 return 0;
             }
@@ -86,6 +88,16 @@ namespace WeChatPlus.Tests
             AssertContains(json, "\"ok\":true", "ok json");
             AssertContains(json, "\"command\":\"version\"", "command json");
             AssertContains(json, "\"version\":\"0.1.0\"", "data json");
+        }
+
+        private static void ParsesHelperVersionResult()
+        {
+            string json = "{\"ok\":true,\"command\":\"version\",\"message\":\"\",\"data\":{\"version\":\"0.1.0\",\"license\":\"GPLv3-compatible open helper boundary\"}}";
+
+            string version = HelperVersionResultParser.ParseVersion(json);
+
+            AssertEqual("0.1.0", version, "helper version");
+            AssertEqual("", HelperVersionResultParser.ParseVersion("{\"ok\":false}"), "missing helper version");
         }
 
         private static void ParsesHelperWindowResults()
@@ -298,6 +310,7 @@ namespace WeChatPlus.Tests
             AssertPackageFile(manifest, "LICENSE", "OpenSourceLicense");
             AssertPackageFile(manifest, "README.md", "RuntimeGuide");
             AssertPackageFile(manifest, "components.json", "OpenSourceNotice");
+            AssertPackageFile(manifest, "update-manifest.json", "UpdateManifest");
         }
 
         private static void BuildsLicenseActivationRequest()
@@ -314,6 +327,25 @@ namespace WeChatPlus.Tests
             AssertContains(request.BodyJson, "\"licenseKey\":\"ABC-123-SECRET\"", "license key body");
             AssertContains(request.BodyJson, "\"deviceIdHash\":\"" + state.DeviceIdHash + "\"", "device hash body");
             AssertContains(request.BodyJson, "\"product\":\"wechat-plus\"", "product body");
+        }
+
+        private static void ParsesUpdateManifestAndFormatsStatus()
+        {
+            string json = "{\"productVersion\":\"0.2.0\",\"helperVersion\":\"0.1.1\",\"downloadUrl\":\"https://example.test/wechat-plus.zip\",\"helperSha256\":\"abc123\",\"releaseNotes\":\"新增窗口嵌入降级提示\"}";
+            UpdateManifest manifest = UpdateManifest.Parse(json);
+            UpdateCheckStatus current = UpdateCheckService.Evaluate(manifest, "0.1.0", "0.1.0");
+            UpdateCheckStatus latest = UpdateCheckService.Evaluate(manifest, "0.2.0", "0.1.1");
+
+            AssertEqual("0.2.0", manifest.ProductVersion, "manifest product version");
+            AssertEqual("0.1.1", manifest.HelperVersion, "manifest helper version");
+            AssertTrue(current.ProductUpdateAvailable, "product update available");
+            AssertTrue(current.HelperUpdateAvailable, "helper update available");
+            AssertContains(current.StatusText, "主程序 0.2.0 可用", "product update text");
+            AssertContains(current.StatusText, "助手组件 0.1.1 可用", "helper update text");
+            AssertContains(current.StatusText, "新增窗口嵌入降级提示", "release notes text");
+            AssertTrue(!latest.ProductUpdateAvailable, "latest product no update");
+            AssertTrue(!latest.HelperUpdateAvailable, "latest helper no update");
+            AssertContains(latest.StatusText, "已是最新版本", "latest status text");
         }
 
         private static void SeedsOpenSourceComponentDeclarations()

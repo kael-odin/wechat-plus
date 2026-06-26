@@ -40,6 +40,7 @@
     <Compile Include="Contracts\HelperCommand.cs" />
     <Compile Include="Contracts\HelperCommandParser.cs" />
     <Compile Include="Contracts\HelperCommandResult.cs" />
+    <Compile Include="Contracts\HelperVersionResultParser.cs" />
     <Compile Include="Contracts\HelperWindowInfo.cs" />
     <Compile Include="Contracts\HelperWindowResultParser.cs" />
     <Compile Include="Contracts\JsonResultWriter.cs" />
@@ -50,6 +51,8 @@
     <Compile Include="Models\ReleasePackageFile.cs" />
     <Compile Include="Models\ReleasePackageManifest.cs" />
     <Compile Include="Models\ReplyCategory.cs" />
+    <Compile Include="Models\UpdateCheckStatus.cs" />
+    <Compile Include="Models\UpdateManifest.cs" />
     <Compile Include="Services\AccountRepository.cs" />
     <Compile Include="Services\AppPaths.cs" />
     <Compile Include="Services\ComponentRepository.cs" />
@@ -60,6 +63,7 @@
     <Compile Include="Services\LicenseFeaturePolicy.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
     <Compile Include="Services\TrialLicenseService.cs" />
+    <Compile Include="Services\UpdateCheckService.cs" />
     <Compile Include="Services\WorkspaceStatusFormatter.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

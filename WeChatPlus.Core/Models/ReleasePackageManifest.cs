@@ -17,7 +17,8 @@ namespace WeChatPlus.Core.Models
                 File("WeChatPlus.OpenHelper.exe", "OpenHelper"),
                 File("LICENSE", "OpenSourceLicense"),
                 File("README.md", "RuntimeGuide"),
-                File("components.json", "OpenSourceNotice")
+                File("components.json", "OpenSourceNotice"),
+                File("update-manifest.json", "UpdateManifest")
             };
             return manifest;
         }

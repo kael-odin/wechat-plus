@@ -87,18 +87,21 @@ namespace WeChatPlus.Shell
             top.Controls.Add(title);
 
             _helperStatus = new Label();
-            _helperStatus.AutoSize = true;
+            _helperStatus.AutoSize = false;
+            _helperStatus.Size = new Size(350, 20);
             _helperStatus.ForeColor = Color.FromArgb(80, 80, 80);
             _helperStatus.Location = new Point(190, 18);
             top.Controls.Add(_helperStatus);
 
-            Button memberButton = TopButton("会员", 650, ShowMemberState);
-            Button noticeButton = TopButton("开源声明", 735, ShowOpenSourceNotice);
-            Button refreshButton = TopButton("刷新助手", 840, delegate { RefreshHelperStatus(); });
-            Button diagnosticsButton = TopButton("诊断", 945, ExportDiagnosticsClicked);
-            Button collapseButton = TopButton("收起侧栏", 1050, delegate { ToggleRightPanel(); });
+            Button memberButton = TopButton("会员", 560, ShowMemberState);
+            Button updateButton = TopButton("检查更新", 645, CheckUpdatesClicked);
+            Button noticeButton = TopButton("开源声明", 750, ShowOpenSourceNotice);
+            Button refreshButton = TopButton("刷新助手", 855, delegate { RefreshHelperStatus(); });
+            Button diagnosticsButton = TopButton("诊断", 960, ExportDiagnosticsClicked);
+            Button collapseButton = TopButton("收起侧栏", 1065, delegate { ToggleRightPanel(); });
 
             top.Controls.Add(memberButton);
+            top.Controls.Add(updateButton);
             top.Controls.Add(noticeButton);
             top.Controls.Add(refreshButton);
             top.Controls.Add(diagnosticsButton);
@@ -741,6 +744,30 @@ namespace WeChatPlus.Shell
                 "开源组件声明");
         }
 
+        private void CheckUpdatesClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                string manifestPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "update-manifest.json");
+                if (!File.Exists(manifestPath))
+                {
+                    _workspaceStatus.Text = "更新检查已预留：未找到本地 update-manifest.json，后续可接入云端版本接口。";
+                    return;
+                }
+
+                string json = File.ReadAllText(manifestPath);
+                UpdateManifest manifest = UpdateManifest.Parse(json);
+                UpdateCheckStatus status = UpdateCheckService.Evaluate(manifest, "0.1.0", GetHelperVersion());
+                _workspaceStatus.Text = status.StatusText;
+                MessageBox.Show(status.StatusText, "检查更新");
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic("update.check", "Check updates failed.", ex);
+                MessageBox.Show("检查更新失败：" + ex.Message, "检查更新");
+            }
+        }
+
         private void ExportDiagnosticsClicked(object sender, EventArgs e)
         {
             using (SaveFileDialog dialog = new SaveFileDialog())
@@ -1086,6 +1113,27 @@ namespace WeChatPlus.Shell
             }
             catch
             {
+            }
+        }
+
+        private string GetHelperVersion()
+        {
+            if (!File.Exists(_helperPath))
+            {
+                return "0.0.0";
+            }
+
+            try
+            {
+                HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
+                string json = client.Run("version --json");
+                string version = HelperVersionResultParser.ParseVersion(json);
+                return string.IsNullOrWhiteSpace(version) ? "0.0.0" : version;
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic("helper.version", "Read helper version failed.", ex);
+                return "0.0.0";
             }
         }
 

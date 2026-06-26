@@ -1,0 +1,7 @@
+{
+  "productVersion": "0.1.0",
+  "helperVersion": "0.1.0",
+  "downloadUrl": "https://example.invalid/wechat-plus/releases/latest",
+  "helperSha256": "",
+  "releaseNotes": "MVP local update manifest placeholder. Replace this file or wire it to a cloud manifest service before commercial release."
+}

@@ -12,6 +12,7 @@ This manifest describes the minimum runtime package for the WeChat Plus MVP. It 
 | `LICENSE` | OpenSourceLicense | GPLv3 license from the upstream project; shipped for open-source component compliance. |
 | `README.md` | RuntimeGuide | Project structure, build commands, GPL boundary, and run instructions. |
 | `components.json` | OpenSourceNotice | Shipped with the runtime package and copied to the app data folder on first run by `ComponentRepository`; exposed in the open-source notice UI. |
+| `update-manifest.json` | UpdateManifest | Local placeholder manifest for product/helper version checks; replace with a downloaded cloud manifest before commercial release. |
 
 ## Boundary Rules
 
@@ -21,4 +22,4 @@ This manifest describes the minimum runtime package for the WeChat Plus MVP. It 
 
 ## Current Build Behavior
 
-`WeChatPlus.Shell.csproj` copies the helper executable, neutral core DLL, root `LICENSE`, root `README.md`, and packaged `components.json` into the Shell output directory after build. On first run, `ComponentRepository` copies the packaged open-source component declaration into the local data directory so users can view it from the app.
+`WeChatPlus.Shell.csproj` copies the helper executable, neutral core DLL, root `LICENSE`, root `README.md`, packaged `components.json`, and `update-manifest.json` into the Shell output directory after build. On first run, `ComponentRepository` copies the packaged open-source component declaration into the local data directory so users can view it from the app. The Shell can read `update-manifest.json` from the runtime folder to show product/helper update status without embedding any real update secret.

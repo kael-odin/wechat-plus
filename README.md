@@ -14,6 +14,7 @@
 - `WeChatPlus.OpenHelper`：独立开源助手组件命令行原型，输出 JSON。
 - `WeChatPlus.Shell`：闭源商用壳原型，三栏 WinForms 工作台 UI。
 - `WeChatPlus.Tests`：无第三方依赖的控制台测试。
+- `WeChatPlus.Shell/update-manifest.json`：本地更新清单占位，用于主程序和助手组件版本检查，商业发布前可替换为云端清单。
 
 ## 架构边界
 
@@ -35,6 +36,8 @@ WeChat Plus 的商业化边界按以下方式设计：
 .\WeChatPlus.Tests\bin\Debug\WeChatPlus.Tests.exe
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe version --json
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe multi-instance status
+.\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe multi-instance windows
+.\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe patch status --app wechat
 ```
 
 运行商用壳：
@@ -55,14 +58,15 @@ WeChat Plus 的商业化边界按以下方式设计：
 - 试用/会员授权状态：设备哈希、试用期、离线宽限期、本地激活码状态、云端激活请求构造；试用版限制最多管理 2 个微信账号并禁用话术导入导出；不硬编码真实密钥。
 - 开源组件声明：默认记录 `WeChatPlus.OpenHelper`、GPLv3 许可证和上游源码地址，并在商用壳内展示。
 - 助手组件：`version --json`、`multi-instance status`、`multi-instance windows`、`multi-instance focus --handle <hWnd>`、`multi-instance close --pid <pid>`、`multi-instance close-all`、`multi-instance close-all-mutex`、`multi-instance close-mutex --pid <pid>`、`patch status --app wechat`。
+- 更新检查：商用壳可读取运行目录的 `update-manifest.json`，比较主程序和助手组件版本并展示本地更新状态；当前不联网、不包含真实更新密钥。
 - 工作台工具：结构化解析助手组件窗口 JSON，批量刷新微信进程/窗口状态、关闭选中微信进程、关闭全部微信、截图到剪贴板、截图时隐藏当前窗口、诊断日志导出。
-- 构建输出：商用壳会把独立助手组件、中立 Core、GPLv3 `LICENSE`、`README.md` 和 `components.json` 复制到自身输出目录，形成最小 MVP 运行包。
-- 测试：命令解析、JSON 输出、助手窗口 JSON 解析、工作区聚焦状态文案、诊断日志写入/导出、话术种子/搜索、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除/排序/离线同步、开源组件声明、试用/本地激活授权状态和授权功能限制。
+- 构建输出：商用壳会把独立助手组件、中立 Core、GPLv3 `LICENSE`、`README.md`、`components.json` 和 `update-manifest.json` 复制到自身输出目录，形成最小 MVP 运行包。
+- 测试：命令解析、JSON 输出、助手版本/窗口 JSON 解析、工作区聚焦状态文案、诊断日志写入/导出、话术种子/搜索、话术更新/删除、JSON/CSV 导入、账号持久化/备注/删除/排序/离线同步、开源组件声明、运行包清单、试用/本地激活授权状态、授权功能限制和更新清单状态。
 
 下一步：
 
 - 为商用壳增加真正的微信窗口嵌入能力，保留当前非嵌入聚焦模式作为降级路径。
-- 接入真实授权服务端和安装器。
+- 接入真实授权服务端、云端更新清单和安装器。
 
 ---
 
