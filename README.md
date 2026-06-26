@@ -38,6 +38,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe multi-instance status
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe multi-instance windows
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe patch status --app wechat
+.\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe --plan
 ```
 
 运行商用壳：
@@ -45,6 +46,15 @@ WeChat Plus 的商业化边界按以下方式设计：
 ```powershell
 .\WeChatPlus.Shell\bin\Debug\WeChatPlus.Shell.exe
 ```
+
+卸载入口：
+
+```powershell
+.\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe --plan
+.\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe
+```
+
+`WeChatPlus.Uninstall.exe` 使用 `InstallerManifest`/`UninstallPlanner` 生成清理计划，只删除清单列出的运行文件和快捷方式；默认保留用户数据目录，后续完整安装器可在此基础上接入开始菜单、注册表和提权流程。
 
 注意：直接构建原始 `RevokeMsgPatcher.sln` 在当前机器上会因为缺少对应 Targeting Pack、NuGet 包和旧 MSBuild 编译能力出现错误；新的 MVP 工作集中在 `WeChatPlus.sln`。
 

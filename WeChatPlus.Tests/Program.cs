@@ -33,6 +33,8 @@ namespace WeChatPlus.Tests
                 Run("formats fallback workspace focus status", FormatsFallbackWorkspaceFocusStatus);
                 Run("defines release package manifest", DefinesReleasePackageManifest);
                 Run("defines installer manifest", DefinesInstallerManifest);
+                Run("creates uninstall plan", CreatesUninstallPlan);
+                Run("executes uninstall cleanup", ExecutesUninstallCleanup);
                 Run("validates release package files", ValidatesReleasePackageFiles);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
@@ -365,6 +367,7 @@ namespace WeChatPlus.Tests
             AssertPackageFile(manifest, "WeChatPlus.Shell.exe", "ClosedSourceShell");
             AssertPackageFile(manifest, "WeChatPlus.Core.dll", "NeutralCore");
             AssertPackageFile(manifest, "WeChatPlus.OpenHelper.exe", "OpenHelper");
+            AssertPackageFile(manifest, "WeChatPlus.Uninstall.exe", "Uninstaller");
             AssertPackageFile(manifest, "LICENSE", "OpenSourceLicense");
             AssertPackageFile(manifest, "README.md", "RuntimeGuide");
             AssertPackageFile(manifest, "components.json", "OpenSourceNotice");
@@ -391,6 +394,48 @@ namespace WeChatPlus.Tests
             AssertEqual(manifest.Files.Length.ToString(), manifest.RuntimeFilesToRemove.Length.ToString(), "installer uninstall file count");
         }
 
+        private static void CreatesUninstallPlan()
+        {
+            string installRoot = CreateTempRoot();
+            string startMenuRoot = CreateTempRoot();
+            string dataRoot = CreateTempRoot();
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+
+            UninstallPlan plan = UninstallPlanner.Create(manifest, installRoot, startMenuRoot, dataRoot);
+
+            AssertEqual("WeChat Plus", plan.ProductName, "uninstall product name");
+            AssertEqual(installRoot, plan.InstallDirectory, "uninstall install directory");
+            AssertEqual(dataRoot, plan.UserDataDirectory, "uninstall user data directory");
+            AssertTrue(plan.PreserveUserData, "uninstall preserves user data by default");
+            AssertContains(plan.RuntimeFilePaths[0], "WeChatPlus.Shell.exe", "uninstall runtime file path");
+            AssertContains(plan.ShortcutPaths[0], "WeChat Plus.lnk", "uninstall shortcut path");
+            AssertContains(plan.RegistryKey, "WeChat Plus", "uninstall registry key");
+        }
+
+        private static void ExecutesUninstallCleanup()
+        {
+            string installRoot = CreateTempRoot();
+            string startMenuRoot = CreateTempRoot();
+            string dataRoot = CreateTempRoot();
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+            UninstallPlan plan = UninstallPlanner.Create(manifest, installRoot, startMenuRoot, dataRoot);
+
+            File.WriteAllText(Path.Combine(installRoot, "WeChatPlus.Shell.exe"), "shell");
+            File.WriteAllText(Path.Combine(installRoot, "WeChatPlus.Core.dll"), "core");
+            File.WriteAllText(Path.Combine(startMenuRoot, "WeChat Plus.lnk"), "shortcut");
+            Directory.CreateDirectory(plan.UserDataDirectory);
+            File.WriteAllText(Path.Combine(plan.UserDataDirectory, "accounts.json"), "[]");
+
+            UninstallResult result = UninstallService.Execute(plan, false);
+
+            AssertTrue(result.Ok, "uninstall result ok");
+            AssertTrue(!File.Exists(Path.Combine(installRoot, "WeChatPlus.Shell.exe")), "uninstall removed shell");
+            AssertTrue(!File.Exists(Path.Combine(installRoot, "WeChatPlus.Core.dll")), "uninstall removed core");
+            AssertTrue(!File.Exists(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "uninstall removed shortcut");
+            AssertTrue(Directory.Exists(plan.UserDataDirectory), "uninstall preserved user data");
+            AssertContains(result.SummaryText, "removed", "uninstall summary");
+        }
+
         private static void ValidatesReleasePackageFiles()
         {
             string runtimeRoot = CreateTempRoot();
@@ -398,6 +443,7 @@ namespace WeChatPlus.Tests
             {
                 "WeChatPlus.Shell.exe",
                 "WeChatPlus.Core.dll",
+                "WeChatPlus.Uninstall.exe",
                 "LICENSE",
                 "README.md",
                 "components.json",
