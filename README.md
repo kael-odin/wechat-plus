@@ -54,7 +54,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 .\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --package-root .\WeChatPlus.Shell\bin\Debug --install-root "$env:TEMP\WeChatPlusInstall" --start-menu-root "$env:TEMP\WeChatPlusStart"
 ```
 
-`WeChatPlus.Install.exe` 使用 `InstallerManifest`/`InstallPlanner` 生成安装计划，复制清单列出的运行文件并创建开始菜单快捷方式占位；正式商业安装器仍需接入真实 `.lnk`、注册表、提权和回滚流程。
+`WeChatPlus.Install.exe` 使用 `InstallerManifest`/`InstallPlanner` 生成安装计划，复制清单列出的运行文件、创建开始菜单快捷方式占位，并写入 `install-registration.json` 作为卸载注册表登记预演；正式商业安装器仍需接入真实 `.lnk`、注册表、提权和回滚流程。
 
 卸载入口：
 

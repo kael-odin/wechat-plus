@@ -18,6 +18,8 @@ namespace WeChatPlus.Core.Models
 
         public string RegistryKey { get; set; }
 
+        public InstallRegistration Registration { get; set; }
+
         public InstallFileCopy[] FileCopies { get; set; }
     }
 }

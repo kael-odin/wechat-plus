@@ -414,6 +414,11 @@ namespace WeChatPlus.Tests
             AssertContains(plan.ShortcutPath, "WeChat Plus.lnk", "install shortcut path");
             AssertContains(plan.UninstallCommand, "WeChatPlus.Uninstall.exe", "install uninstall command");
             AssertContains(plan.RegistryKey, "WeChat Plus", "install registry key");
+            AssertContains(plan.Registration.DisplayName, "WeChat Plus", "install registration display name");
+            AssertContains(plan.Registration.Publisher, "Kael Odin", "install registration publisher");
+            AssertContains(plan.Registration.InstallLocation, installRoot, "install registration location");
+            AssertContains(plan.Registration.DisplayIcon, "WeChatPlus.Shell.exe", "install registration icon");
+            AssertContains(plan.Registration.UninstallString, "WeChatPlus.Uninstall.exe", "install registration uninstall");
         }
 
         private static void ExecutesInstallCopy()
@@ -437,6 +442,9 @@ namespace WeChatPlus.Tests
             AssertTrue(File.Exists(Path.Combine(installRoot, "WeChatPlus.OpenHelper.exe")), "install copied helper");
             AssertTrue(File.Exists(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "install created shortcut");
             AssertContains(File.ReadAllText(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "WeChatPlus.Shell.exe", "install shortcut target");
+            AssertTrue(result.WroteRegistration, "install wrote registration");
+            AssertTrue(File.Exists(Path.Combine(installRoot, "install-registration.json")), "install registration file");
+            AssertContains(File.ReadAllText(Path.Combine(installRoot, "install-registration.json")), "UninstallString", "install registration uninstall json");
             AssertContains(result.SummaryText, "installed", "install summary");
         }
 

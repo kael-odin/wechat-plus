@@ -50,6 +50,7 @@
     <Compile Include="Models\HelperIntegrityStatus.cs" />
     <Compile Include="Models\InstallFileCopy.cs" />
     <Compile Include="Models\InstallPlan.cs" />
+    <Compile Include="Models\InstallRegistration.cs" />
     <Compile Include="Models\InstallResult.cs" />
     <Compile Include="Models\InstallerManifest.cs" />
     <Compile Include="Models\LicenseState.cs" />

@@ -17,6 +17,7 @@ namespace WeChatPlus.Core.Services
             plan.ShortcutTargetPath = Path.Combine(plan.InstallDirectory, source.ShortcutTarget ?? string.Empty);
             plan.UninstallCommand = Path.Combine(plan.InstallDirectory, source.UninstallCommand ?? string.Empty);
             plan.RegistryKey = source.UninstallRegistryKey ?? string.Empty;
+            plan.Registration = CreateRegistration(source, plan);
             plan.FileCopies = CreateCopies(source.Files, plan.PackageDirectory, plan.InstallDirectory);
             return plan;
         }
@@ -50,6 +51,18 @@ namespace WeChatPlus.Core.Services
             }
 
             return copies;
+        }
+
+        private static InstallRegistration CreateRegistration(InstallerManifest manifest, InstallPlan plan)
+        {
+            InstallRegistration registration = new InstallRegistration();
+            registration.RegistryKey = manifest.UninstallRegistryKey ?? string.Empty;
+            registration.DisplayName = manifest.ProductName ?? string.Empty;
+            registration.Publisher = manifest.Publisher ?? string.Empty;
+            registration.InstallLocation = plan.InstallDirectory ?? string.Empty;
+            registration.DisplayIcon = plan.ShortcutTargetPath ?? string.Empty;
+            registration.UninstallString = plan.UninstallCommand ?? string.Empty;
+            return registration;
         }
     }
 }

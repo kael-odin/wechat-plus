@@ -28,6 +28,7 @@ namespace WeChatPlus.Install
                 output.Data["shortcutPath"] = plan.ShortcutPath;
                 output.Data["fileCount"] = plan.FileCopies.Length;
                 output.Data["uninstallCommand"] = plan.UninstallCommand;
+                output.Data["registryKey"] = plan.RegistryKey;
 
                 if (!planOnly)
                 {
@@ -36,6 +37,8 @@ namespace WeChatPlus.Install
                     output.Message = result.SummaryText;
                     output.Data["copiedFiles"] = result.CopiedFiles;
                     output.Data["createdShortcut"] = result.CreatedShortcut;
+                    output.Data["wroteRegistration"] = result.WroteRegistration;
+                    output.Data["registrationPath"] = result.RegistrationPath;
                     output.Data["errors"] = result.Errors;
                 }
             }

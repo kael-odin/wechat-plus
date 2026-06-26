@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Web.Script.Serialization;
 using WeChatPlus.Core.Models;
 
 namespace WeChatPlus.Core.Services
@@ -12,11 +13,15 @@ namespace WeChatPlus.Core.Services
             ArrayList errors = new ArrayList();
             int copied = CopyFiles(plan == null ? null : plan.FileCopies, errors);
             bool shortcut = CreateShortcutPlaceholder(plan, errors);
+            string registrationPath;
+            bool registration = WriteRegistration(plan, errors, out registrationPath);
 
             InstallResult result = new InstallResult();
             result.Ok = errors.Count == 0;
             result.CopiedFiles = copied;
             result.CreatedShortcut = shortcut;
+            result.WroteRegistration = registration;
+            result.RegistrationPath = registrationPath;
             result.Errors = ToStringArray(errors);
             result.SummaryText = BuildSummary(result);
             return result;
@@ -83,6 +88,33 @@ namespace WeChatPlus.Core.Services
             }
         }
 
+        private static bool WriteRegistration(InstallPlan plan, ArrayList errors, out string registrationPath)
+        {
+            registrationPath = string.Empty;
+            if (plan == null || plan.Registration == null || string.IsNullOrEmpty(plan.InstallDirectory))
+            {
+                return false;
+            }
+
+            try
+            {
+                if (!Directory.Exists(plan.InstallDirectory))
+                {
+                    Directory.CreateDirectory(plan.InstallDirectory);
+                }
+
+                registrationPath = Path.Combine(plan.InstallDirectory, "install-registration.json");
+                JavaScriptSerializer serializer = new JavaScriptSerializer();
+                File.WriteAllText(registrationPath, serializer.Serialize(plan.Registration));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errors.Add("install-registration.json: " + ex.Message);
+                return false;
+            }
+        }
+
         private static string[] ToStringArray(ArrayList values)
         {
             string[] result = new string[values.Count];
@@ -96,7 +128,7 @@ namespace WeChatPlus.Core.Services
 
         private static string BuildSummary(InstallResult result)
         {
-            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? "created" : "not created");
+            return "installed " + result.CopiedFiles + " files; shortcut " + (result.CreatedShortcut ? "created" : "not created") + "; registration " + (result.WroteRegistration ? "written" : "not written");
         }
     }
 }
