@@ -888,6 +888,7 @@ namespace WeChatPlus.Shell
         private void ShowSettings(object sender, EventArgs e)
         {
             SettingsSummary summary = SettingsSummaryService.Create(_dataRoot, AppDomain.CurrentDomain.BaseDirectory);
+            ReleasePackageValidationResult package = ReleasePackageValidator.Validate(summary.RuntimeRoot, ReleasePackageManifest.CreateDefault());
             using (Form dialog = new Form())
             {
                 dialog.Text = "设置";
@@ -911,6 +912,9 @@ namespace WeChatPlus.Shell
                 details.ScrollBars = ScrollBars.Both;
                 details.WordWrap = false;
                 details.Text =
+                    "运行包校验：" + package.SummaryText + Environment.NewLine +
+                    FormatMissingPackageFiles(package) + Environment.NewLine +
+                    Environment.NewLine +
                     "数据目录：" + summary.DataRoot + Environment.NewLine +
                     "运行目录：" + summary.RuntimeRoot + Environment.NewLine +
                     Environment.NewLine +
@@ -949,6 +953,27 @@ namespace WeChatPlus.Shell
         {
             string status = File.Exists(path) ? "存在" : "未找到";
             return label + "（" + status + "）：" + path;
+        }
+
+        private static string FormatMissingPackageFiles(ReleasePackageValidationResult package)
+        {
+            if (package == null || package.IsComplete || package.MissingFiles == null || package.MissingFiles.Length == 0)
+            {
+                return "缺失文件：无";
+            }
+
+            string text = "缺失文件：";
+            for (int i = 0; i < package.MissingFiles.Length; i++)
+            {
+                if (i > 0)
+                {
+                    text += "、";
+                }
+
+                text += package.MissingFiles[i].Path;
+            }
+
+            return text;
         }
 
         private void ShowOpenSourceNotice(object sender, EventArgs e)

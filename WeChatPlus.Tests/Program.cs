@@ -31,6 +31,7 @@ namespace WeChatPlus.Tests
                 Run("reorders account records", ReordersAccountRecords);
                 Run("formats fallback workspace focus status", FormatsFallbackWorkspaceFocusStatus);
                 Run("defines release package manifest", DefinesReleasePackageManifest);
+                Run("validates release package files", ValidatesReleasePackageFiles);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("copies packaged open source component declarations", CopiesPackagedOpenSourceComponentDeclarations);
                 Run("writes and exports diagnostics log", WritesAndExportsDiagnosticsLog);
@@ -347,6 +348,39 @@ namespace WeChatPlus.Tests
             AssertPackageFile(manifest, "README.md", "RuntimeGuide");
             AssertPackageFile(manifest, "components.json", "OpenSourceNotice");
             AssertPackageFile(manifest, "update-manifest.json", "UpdateManifest");
+        }
+
+        private static void ValidatesReleasePackageFiles()
+        {
+            string runtimeRoot = CreateTempRoot();
+            string[] files = new[]
+            {
+                "WeChatPlus.Shell.exe",
+                "WeChatPlus.Core.dll",
+                "LICENSE",
+                "README.md",
+                "components.json",
+                "update-manifest.json"
+            };
+            for (int i = 0; i < files.Length; i++)
+            {
+                File.WriteAllText(Path.Combine(runtimeRoot, files[i]), "test");
+            }
+
+            ReleasePackageValidationResult missing = ReleasePackageValidator.Validate(runtimeRoot, ReleasePackageManifest.CreateDefault());
+
+            AssertTrue(!missing.IsComplete, "incomplete runtime package");
+            AssertTrue(missing.MissingFiles.Length == 1, "missing helper count");
+            AssertEqual("WeChatPlus.OpenHelper.exe", missing.MissingFiles[0].Path, "missing helper path");
+            AssertContains(missing.SummaryText, "缺少 1 个必需文件", "missing package summary");
+
+            File.WriteAllText(Path.Combine(runtimeRoot, "WeChatPlus.OpenHelper.exe"), "test");
+
+            ReleasePackageValidationResult complete = ReleasePackageValidator.Validate(runtimeRoot, ReleasePackageManifest.CreateDefault());
+
+            AssertTrue(complete.IsComplete, "complete runtime package");
+            AssertTrue(complete.MissingFiles.Length == 0, "complete missing count");
+            AssertContains(complete.SummaryText, "运行包完整", "complete package summary");
         }
 
         private static void BuildsLicenseActivationRequest()

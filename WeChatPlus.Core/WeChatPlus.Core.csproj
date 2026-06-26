@@ -51,6 +51,7 @@
     <Compile Include="Models\QuickReply.cs" />
     <Compile Include="Models\ReleasePackageFile.cs" />
     <Compile Include="Models\ReleasePackageManifest.cs" />
+    <Compile Include="Models\ReleasePackageValidationResult.cs" />
     <Compile Include="Models\ReplyCategory.cs" />
     <Compile Include="Models\SettingsSummary.cs" />
     <Compile Include="Models\UpdateCheckStatus.cs" />
@@ -65,6 +66,7 @@
     <Compile Include="Services\LicenseFeaturePolicy.cs" />
     <Compile Include="Services\PrivacyLockService.cs" />
     <Compile Include="Services\QuickReplyRepository.cs" />
+    <Compile Include="Services\ReleasePackageValidator.cs" />
     <Compile Include="Services\SettingsSummaryService.cs" />
     <Compile Include="Services\TrialLicenseService.cs" />
     <Compile Include="Services\UpdateCheckService.cs" />
