@@ -25,6 +25,7 @@ namespace WeChatPlus.Shell
         private ListBox _accountList;
         private ListBox _categoryList;
         private ListBox _replyList;
+        private Button[] _shortcutButtons;
         private TextBox _searchBox;
         private Label _helperStatus;
         private Label _workspaceStatus;
@@ -331,6 +332,17 @@ namespace WeChatPlus.Shell
             deleteButton.Click += DeleteReplyClicked;
             panel.Controls.Add(deleteButton);
 
+            _shortcutButtons = new Button[3];
+            for (int i = 0; i < _shortcutButtons.Length; i++)
+            {
+                Button shortcut = SideButton("短语", 10 + (i * 90), 568);
+                shortcut.Size = new Size(82, 32);
+                shortcut.Visible = false;
+                shortcut.Click += ShortcutReplyClicked;
+                _shortcutButtons[i] = shortcut;
+                panel.Controls.Add(shortcut);
+            }
+
             return panel;
         }
 
@@ -398,6 +410,7 @@ namespace WeChatPlus.Shell
             {
                 _replyList.Items.Add(new ReplyListItem(replies[i]));
             }
+            RefreshShortcutButtons();
         }
 
         private void RefreshHelperStatus()
@@ -574,6 +587,44 @@ namespace WeChatPlus.Shell
 
             Clipboard.SetText(item.Reply.Content);
             _workspaceStatus.Text = statusPrefix + item.Reply.Title;
+        }
+
+        private void RefreshShortcutButtons()
+        {
+            if (_shortcutButtons == null)
+            {
+                return;
+            }
+
+            QuickReply[] shortcuts = _replyRepository.GetShortcutReplies(_shortcutButtons.Length);
+            for (int i = 0; i < _shortcutButtons.Length; i++)
+            {
+                Button button = _shortcutButtons[i];
+                if (i >= shortcuts.Length)
+                {
+                    button.Tag = null;
+                    button.Visible = false;
+                    continue;
+                }
+
+                button.Tag = shortcuts[i];
+                button.Text = TrimButtonText(shortcuts[i].Title);
+                button.Visible = true;
+            }
+        }
+
+        private void ShortcutReplyClicked(object sender, EventArgs e)
+        {
+            Button button = sender as Button;
+            QuickReply reply = button == null ? null : button.Tag as QuickReply;
+            if (reply == null || string.IsNullOrWhiteSpace(reply.Content))
+            {
+                _workspaceStatus.Text = "当前快捷短语没有可复制内容。";
+                return;
+            }
+
+            Clipboard.SetText(reply.Content);
+            _workspaceStatus.Text = "快捷短语已复制到剪贴板：" + reply.Title;
         }
 
         private void EditReplyClicked(object sender, EventArgs e)
@@ -1423,6 +1474,17 @@ namespace WeChatPlus.Shell
             }
             value = value.Replace(Environment.NewLine, " ").Trim();
             return value.Length > 80 ? value.Substring(0, 80) + "..." : value;
+        }
+
+        private static string TrimButtonText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "短语";
+            }
+
+            string trimmed = value.Trim();
+            return trimmed.Length > 5 ? trimmed.Substring(0, 5) : trimmed;
         }
 
         private sealed class CategoryListItem

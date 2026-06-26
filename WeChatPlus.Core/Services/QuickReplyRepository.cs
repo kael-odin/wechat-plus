@@ -65,6 +65,18 @@ namespace WeChatPlus.Core.Services
                 .ToArray();
         }
 
+        public QuickReply[] GetShortcutReplies(int limit)
+        {
+            int take = limit <= 0 ? 3 : limit;
+            return GetAllReplies()
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Content))
+                .OrderByDescending(x => x.IsFavorite)
+                .ThenBy(x => x.SortOrder)
+                .ThenBy(x => x.Title)
+                .Take(take)
+                .ToArray();
+        }
+
         public void SaveReply(QuickReply reply)
         {
             if (reply == null)

@@ -19,6 +19,7 @@ namespace WeChatPlus.Tests
                 Run("parses helper version result", ParsesHelperVersionResult);
                 Run("parses helper window results", ParsesHelperWindowResults);
                 Run("seeds and searches quick replies", SeedsAndSearchesQuickReplies);
+                Run("returns shortcut quick replies", ReturnsShortcutQuickReplies);
                 Run("updates quick replies by id", UpdatesQuickRepliesById);
                 Run("deletes quick replies by id", DeletesQuickRepliesById);
                 Run("imports exported quick reply json", ImportsExportedQuickReplyJson);
@@ -139,6 +140,28 @@ namespace WeChatPlus.Tests
             AssertTrue(categories.Length >= 7, "default category count");
             AssertTrue(welcome.Length > 0, "welcome search count");
             AssertContains(welcome[0].Content, "欢迎", "welcome content");
+        }
+
+        private static void ReturnsShortcutQuickReplies()
+        {
+            QuickReplyRepository repository = new QuickReplyRepository(CreateTempRoot());
+            repository.EnsureSeedData();
+
+            QuickReply favorite = new QuickReply();
+            favorite.Id = "favorite-shortcut";
+            favorite.Title = "收藏短语";
+            favorite.Content = "收藏内容";
+            favorite.CategoryId = "favorite";
+            favorite.Tags = "收藏";
+            favorite.SortOrder = 999;
+            favorite.IsFavorite = true;
+            repository.SaveReply(favorite);
+
+            QuickReply[] shortcuts = repository.GetShortcutReplies(3);
+
+            AssertEqual("3", shortcuts.Length.ToString(), "shortcut count");
+            AssertEqual("收藏短语", shortcuts[0].Title, "favorite first shortcut");
+            AssertTrue(shortcuts[1].SortOrder <= shortcuts[2].SortOrder, "shortcut sorted by sort order");
         }
 
         private static void CreatesTrialLicenseState()
