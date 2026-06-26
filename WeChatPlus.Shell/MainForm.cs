@@ -734,9 +734,11 @@ namespace WeChatPlus.Shell
                 HelperProcessClient client = new HelperProcessClient(_helperPath, 3000);
                 string json = client.Run("multi-instance windows");
                 HelperWindowInfo[] windows = HelperWindowResultParser.ParseWindows(json);
+                int[] activeProcessIds = ExtractProcessIds(windows);
+                int offlineCount = _accountRepository.MarkMissingProcessesOffline(activeProcessIds);
                 if (windows.Length == 0)
                 {
-                    _workspaceStatus.Text = "当前没有检测到微信窗口。";
+                    _workspaceStatus.Text = offlineCount > 0 ? "当前没有检测到微信窗口，已更新离线账号：" + offlineCount + " 个。" : "当前没有检测到微信窗口。";
                     RefreshAccounts();
                     RefreshWeChatProcessStatus();
                     return;
@@ -759,7 +761,7 @@ namespace WeChatPlus.Shell
                 {
                     SelectAccount(selected.Id);
                 }
-                _workspaceStatus.Text = "已刷新微信窗口：" + windows.Length + " 个。";
+                _workspaceStatus.Text = offlineCount > 0 ? "已刷新微信窗口：" + windows.Length + " 个，离线账号：" + offlineCount + " 个。" : "已刷新微信窗口：" + windows.Length + " 个。";
                 RefreshWeChatProcessStatus();
             }
             catch (Exception ex)
@@ -991,6 +993,22 @@ namespace WeChatPlus.Shell
         private static int ExtractProcessId(string helperJson)
         {
             return ExtractInt(helperJson, "processId");
+        }
+
+        private static int[] ExtractProcessIds(HelperWindowInfo[] windows)
+        {
+            if (windows == null || windows.Length == 0)
+            {
+                return new int[0];
+            }
+
+            int[] processIds = new int[windows.Length];
+            for (int i = 0; i < windows.Length; i++)
+            {
+                processIds[i] = windows[i].ProcessId;
+            }
+
+            return processIds;
         }
 
         private static int ExtractInt(string json, string propertyName)

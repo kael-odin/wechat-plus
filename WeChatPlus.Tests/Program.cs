@@ -25,6 +25,7 @@ namespace WeChatPlus.Tests
                 Run("persists account records", PersistsAccountRecords);
                 Run("renames and deletes account records", RenamesAndDeletesAccountRecords);
                 Run("preserves account remarks on process refresh", PreservesAccountRemarksOnProcessRefresh);
+                Run("marks missing account processes offline", MarksMissingAccountProcessesOffline);
                 Run("reorders account records", ReordersAccountRecords);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
@@ -194,6 +195,27 @@ namespace WeChatPlus.Tests
             AssertEqual("售前客服", accounts[0].DisplayName, "remark after refresh");
         }
 
+        private static void MarksMissingAccountProcessesOffline()
+        {
+            string root = CreateTempRoot();
+            AccountRepository repository = new AccountRepository(root);
+            AccountRecord active = repository.UpsertFromProcess(4101, "在线账号", "Detected");
+            AccountRecord missing = repository.UpsertFromProcess(4102, "离线账号", "Detected");
+
+            int changed = repository.MarkMissingProcessesOffline(new[] { 4101 });
+
+            AccountRecord[] accounts = repository.GetAll();
+            AccountRecord refreshedActive = FindAccount(accounts, active.Id);
+            AccountRecord refreshedMissing = FindAccount(accounts, missing.Id);
+
+            AssertEqual("1", changed.ToString(), "offline changed count");
+            AssertEqual("Detected", refreshedActive.Status, "active status");
+            AssertEqual("4101", refreshedActive.ProcessId.ToString(), "active pid");
+            AssertEqual("Offline", refreshedMissing.Status, "missing status");
+            AssertEqual("0", refreshedMissing.ProcessId.ToString(), "missing pid");
+            AssertEqual("", refreshedMissing.WindowHandle, "missing handle");
+        }
+
         private static void ReordersAccountRecords()
         {
             string root = CreateTempRoot();
@@ -324,6 +346,19 @@ namespace WeChatPlus.Tests
             string root = Path.Combine(Path.GetTempPath(), "WeChatPlusTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
             return root;
+        }
+
+        private static AccountRecord FindAccount(AccountRecord[] accounts, string id)
+        {
+            for (int i = 0; i < accounts.Length; i++)
+            {
+                if (string.Equals(accounts[i].Id, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    return accounts[i];
+                }
+            }
+
+            throw new InvalidOperationException("Missing account " + id);
         }
 
         private static void AssertEqual(string expected, string actual, string message)

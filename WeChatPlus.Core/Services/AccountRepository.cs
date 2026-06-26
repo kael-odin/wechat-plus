@@ -89,6 +89,38 @@ namespace WeChatPlus.Core.Services
             Save(accounts.ToArray());
         }
 
+        public int MarkMissingProcessesOffline(int[] activeProcessIds)
+        {
+            List<int> activeIds = activeProcessIds == null
+                ? new List<int>()
+                : new List<int>(activeProcessIds.Where(x => x > 0));
+            List<AccountRecord> accounts = new List<AccountRecord>(GetAll());
+            int changed = 0;
+            DateTime now = DateTime.UtcNow;
+
+            for (int i = 0; i < accounts.Count; i++)
+            {
+                AccountRecord record = accounts[i];
+                if (record.ProcessId <= 0 || activeIds.Contains(record.ProcessId))
+                {
+                    continue;
+                }
+
+                record.Status = "Offline";
+                record.ProcessId = 0;
+                record.WindowHandle = string.Empty;
+                record.UpdatedAtUtc = now;
+                changed++;
+            }
+
+            if (changed > 0)
+            {
+                Save(accounts.ToArray());
+            }
+
+            return changed;
+        }
+
         public bool UpdateDisplayName(string id, string displayName)
         {
             if (string.IsNullOrEmpty(id) || string.IsNullOrWhiteSpace(displayName))
