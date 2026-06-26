@@ -592,14 +592,64 @@ namespace WeChatPlus.Shell
         private void ShowMemberState(object sender, EventArgs e)
         {
             LicenseState state = _licenseService.GetOrCreateTrial();
-            LicenseActivationRequest request = _licenseApiClient.BuildActivationRequest("请在此输入激活码", state);
-            MessageBox.Show(
-                "当前方案：" + state.Plan + Environment.NewLine +
-                "试用到期：" + state.ExpiresAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
-                "设备哈希：" + state.DeviceIdHash.Substring(0, 12) + "..." + Environment.NewLine +
-                "激活接口：" + request.Method + " " + request.Url + Environment.NewLine +
-                "说明：当前仅预留云端授权请求，不包含真实密钥。",
-                "会员状态");
+            using (Form dialog = new Form())
+            {
+                dialog.Text = "会员状态";
+                dialog.Size = new Size(520, 300);
+                dialog.StartPosition = FormStartPosition.CenterParent;
+
+                Label stateLabel = new Label();
+                stateLabel.Location = new Point(16, 16);
+                stateLabel.Size = new Size(470, 100);
+                stateLabel.Text =
+                    "当前方案：" + state.Plan + Environment.NewLine +
+                    "授权到期：" + state.ExpiresAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                    "离线宽限：" + state.OfflineGraceUntilUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                    "设备哈希：" + state.DeviceIdHash.Substring(0, 12) + "..." + Environment.NewLine +
+                    "激活码：" + (string.IsNullOrEmpty(state.LicenseKeyMasked) ? "未激活" : state.LicenseKeyMasked);
+                dialog.Controls.Add(stateLabel);
+
+                TextBox licenseKey = new TextBox();
+                licenseKey.Location = new Point(16, 132);
+                licenseKey.Size = new Size(330, 23);
+                licenseKey.Text = "ABC-123-SECRET";
+                dialog.Controls.Add(licenseKey);
+
+                Label apiLabel = new Label();
+                apiLabel.Location = new Point(16, 166);
+                apiLabel.Size = new Size(470, 48);
+                apiLabel.ForeColor = Color.FromArgb(80, 88, 96);
+                apiLabel.Text = "激活会保存本地授权状态，并构造预留云端请求；当前不联网、不包含真实密钥。";
+                dialog.Controls.Add(apiLabel);
+
+                Button activate = new Button();
+                activate.Text = "本地激活";
+                activate.Location = new Point(366, 130);
+                activate.Size = new Size(92, 28);
+                activate.Click += delegate
+                {
+                    LicenseActivationRequest request = _licenseApiClient.BuildActivationRequest(licenseKey.Text, state);
+                    LicenseState activated = _licenseService.ApplyActivation(licenseKey.Text, "personal", DateTime.UtcNow.AddDays(365));
+                    stateLabel.Text =
+                        "当前方案：" + activated.Plan + Environment.NewLine +
+                        "授权到期：" + activated.ExpiresAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                        "离线宽限：" + activated.OfflineGraceUntilUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm") + Environment.NewLine +
+                        "设备哈希：" + activated.DeviceIdHash.Substring(0, 12) + "..." + Environment.NewLine +
+                        "激活码：" + activated.LicenseKeyMasked;
+                    apiLabel.Text = "预留接口：" + request.Method + " " + request.Url;
+                    _workspaceStatus.Text = "会员状态已本地激活：" + activated.Plan;
+                };
+                dialog.Controls.Add(activate);
+
+                Button close = new Button();
+                close.Text = "关闭";
+                close.Location = new Point(390, 220);
+                close.DialogResult = DialogResult.OK;
+                dialog.Controls.Add(close);
+                dialog.AcceptButton = close;
+
+                dialog.ShowDialog(this);
+            }
         }
 
         private void ShowOpenSourceNotice(object sender, EventArgs e)

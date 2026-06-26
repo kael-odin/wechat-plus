@@ -49,6 +49,41 @@ namespace WeChatPlus.Core.Services
             return state;
         }
 
+        public LicenseState ApplyActivation(string licenseKey, string plan, DateTime expiresAtUtc)
+        {
+            if (string.IsNullOrWhiteSpace(licenseKey))
+            {
+                throw new ArgumentException("License key is required.", "licenseKey");
+            }
+
+            LicenseState state = GetOrCreateTrial();
+            DateTime now = DateTime.UtcNow;
+            state.LicenseKeyMasked = MaskLicenseKey(licenseKey);
+            state.Plan = string.IsNullOrWhiteSpace(plan) ? "personal" : plan.Trim();
+            state.ExpiresAtUtc = expiresAtUtc <= now ? now.AddDays(365) : expiresAtUtc;
+            state.LastVerifiedAtUtc = now;
+            state.OfflineGraceUntilUtc = now.AddDays(45);
+
+            File.WriteAllText(_licensePath, _serializer.Serialize(state));
+            return state;
+        }
+
+        public static string MaskLicenseKey(string licenseKey)
+        {
+            if (string.IsNullOrWhiteSpace(licenseKey))
+            {
+                return string.Empty;
+            }
+
+            string trimmed = licenseKey.Trim();
+            if (trimmed.Length <= 6)
+            {
+                return "***";
+            }
+
+            return trimmed.Substring(0, 3) + "..." + trimmed.Substring(trimmed.Length - 4);
+        }
+
         private static string ComputeDeviceHash()
         {
             string machine = Environment.MachineName ?? string.Empty;

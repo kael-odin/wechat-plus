@@ -25,6 +25,7 @@ namespace WeChatPlus.Tests
                 Run("renames and deletes account records", RenamesAndDeletesAccountRecords);
                 Run("seeds open source component declarations", SeedsOpenSourceComponentDeclarations);
                 Run("creates trial license state", CreatesTrialLicenseState);
+                Run("applies local license activation", AppliesLocalLicenseActivation);
                 Run("builds license activation request", BuildsLicenseActivationRequest);
                 Console.WriteLine("All tests passed: " + _passed);
                 return 0;
@@ -97,6 +98,24 @@ namespace WeChatPlus.Tests
             AssertEqual("trial", state.Plan, "trial plan");
             AssertTrue(!string.IsNullOrEmpty(state.DeviceIdHash), "device hash");
             AssertTrue(state.OfflineGraceUntilUtc > DateTime.UtcNow, "offline grace");
+        }
+
+        private static void AppliesLocalLicenseActivation()
+        {
+            string root = CreateTempRoot();
+            TrialLicenseService service = new TrialLicenseService(root);
+
+            LicenseState activated = service.ApplyActivation("ABC-123-SECRET", "personal", DateTime.UtcNow.AddDays(365));
+
+            AssertEqual("personal", activated.Plan, "activated plan");
+            AssertEqual("ABC...CRET", activated.LicenseKeyMasked, "masked license key");
+            AssertTrue(activated.ExpiresAtUtc > DateTime.UtcNow.AddDays(300), "activated expiry");
+            AssertTrue(activated.OfflineGraceUntilUtc > DateTime.UtcNow.AddDays(30), "activated offline grace");
+
+            TrialLicenseService reloaded = new TrialLicenseService(root);
+            LicenseState persisted = reloaded.GetOrCreateTrial();
+            AssertEqual("personal", persisted.Plan, "persisted activated plan");
+            AssertEqual("ABC...CRET", persisted.LicenseKeyMasked, "persisted masked key");
         }
 
         private static void PersistsAccountRecords()
