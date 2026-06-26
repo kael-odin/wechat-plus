@@ -38,6 +38,7 @@ WeChat Plus 的商业化边界按以下方式设计：
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe multi-instance status
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe multi-instance windows
 .\WeChatPlus.OpenHelper\bin\Debug\WeChatPlus.OpenHelper.exe patch status --app wechat
+.\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --plan
 .\WeChatPlus.Uninstall\bin\Debug\WeChatPlus.Uninstall.exe --plan
 ```
 
@@ -46,6 +47,14 @@ WeChat Plus 的商业化边界按以下方式设计：
 ```powershell
 .\WeChatPlus.Shell\bin\Debug\WeChatPlus.Shell.exe
 ```
+
+安装入口：
+```powershell
+.\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --plan
+.\WeChatPlus.Install\bin\Debug\WeChatPlus.Install.exe --package-root .\WeChatPlus.Shell\bin\Debug --install-root "$env:TEMP\WeChatPlusInstall" --start-menu-root "$env:TEMP\WeChatPlusStart"
+```
+
+`WeChatPlus.Install.exe` 使用 `InstallerManifest`/`InstallPlanner` 生成安装计划，复制清单列出的运行文件并创建开始菜单快捷方式占位；正式商业安装器仍需接入真实 `.lnk`、注册表、提权和回滚流程。
 
 卸载入口：
 

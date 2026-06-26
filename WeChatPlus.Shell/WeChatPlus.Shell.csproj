@@ -60,6 +60,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="AfterBuild">
     <Copy SourceFiles="..\WeChatPlus.OpenHelper\bin\$(Configuration)\WeChatPlus.OpenHelper.exe" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\WeChatPlus.OpenHelper\bin\$(Configuration)\WeChatPlus.OpenHelper.exe')" />
+    <Copy SourceFiles="..\WeChatPlus.Install\bin\$(Configuration)\WeChatPlus.Install.exe" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\WeChatPlus.Install\bin\$(Configuration)\WeChatPlus.Install.exe')" />
     <Copy SourceFiles="..\WeChatPlus.Uninstall\bin\$(Configuration)\WeChatPlus.Uninstall.exe" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\WeChatPlus.Uninstall\bin\$(Configuration)\WeChatPlus.Uninstall.exe')" />
     <Copy SourceFiles="..\WeChatPlus.Core\bin\$(Configuration)\WeChatPlus.Core.dll" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\WeChatPlus.Core\bin\$(Configuration)\WeChatPlus.Core.dll')" />
     <Copy SourceFiles="..\LICENSE" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('..\LICENSE')" />

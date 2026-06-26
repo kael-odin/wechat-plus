@@ -33,6 +33,8 @@ namespace WeChatPlus.Tests
                 Run("formats fallback workspace focus status", FormatsFallbackWorkspaceFocusStatus);
                 Run("defines release package manifest", DefinesReleasePackageManifest);
                 Run("defines installer manifest", DefinesInstallerManifest);
+                Run("creates install plan", CreatesInstallPlan);
+                Run("executes install copy", ExecutesInstallCopy);
                 Run("creates uninstall plan", CreatesUninstallPlan);
                 Run("executes uninstall cleanup", ExecutesUninstallCleanup);
                 Run("validates release package files", ValidatesReleasePackageFiles);
@@ -367,6 +369,7 @@ namespace WeChatPlus.Tests
             AssertPackageFile(manifest, "WeChatPlus.Shell.exe", "ClosedSourceShell");
             AssertPackageFile(manifest, "WeChatPlus.Core.dll", "NeutralCore");
             AssertPackageFile(manifest, "WeChatPlus.OpenHelper.exe", "OpenHelper");
+            AssertPackageFile(manifest, "WeChatPlus.Install.exe", "Installer");
             AssertPackageFile(manifest, "WeChatPlus.Uninstall.exe", "Uninstaller");
             AssertPackageFile(manifest, "LICENSE", "OpenSourceLicense");
             AssertPackageFile(manifest, "README.md", "RuntimeGuide");
@@ -392,6 +395,49 @@ namespace WeChatPlus.Tests
             AssertContains(manifest.UserDataDirectoryName, "WeChat Plus", "installer user data directory");
             AssertContains(manifest.ShortcutsToRemove[0], "WeChat Plus.lnk", "installer shortcut removal");
             AssertEqual(manifest.Files.Length.ToString(), manifest.RuntimeFilesToRemove.Length.ToString(), "installer uninstall file count");
+        }
+
+        private static void CreatesInstallPlan()
+        {
+            string packageRoot = CreateTempRoot();
+            string installRoot = CreateTempRoot();
+            string startMenuRoot = CreateTempRoot();
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+
+            InstallPlan plan = InstallPlanner.Create(manifest, packageRoot, installRoot, startMenuRoot);
+
+            AssertEqual("WeChat Plus", plan.ProductName, "install product name");
+            AssertEqual(packageRoot, plan.PackageDirectory, "install package directory");
+            AssertEqual(installRoot, plan.InstallDirectory, "install install directory");
+            AssertContains(plan.FileCopies[0].SourcePath, "WeChatPlus.Shell.exe", "install copy source");
+            AssertContains(plan.FileCopies[0].DestinationPath, "WeChatPlus.Shell.exe", "install copy destination");
+            AssertContains(plan.ShortcutPath, "WeChat Plus.lnk", "install shortcut path");
+            AssertContains(plan.UninstallCommand, "WeChatPlus.Uninstall.exe", "install uninstall command");
+            AssertContains(plan.RegistryKey, "WeChat Plus", "install registry key");
+        }
+
+        private static void ExecutesInstallCopy()
+        {
+            string packageRoot = CreateTempRoot();
+            string installRoot = CreateTempRoot();
+            string startMenuRoot = CreateTempRoot();
+            InstallerManifest manifest = InstallerManifest.CreateDefault(ReleasePackageManifest.CreateDefault());
+
+            for (int i = 0; i < manifest.Files.Length; i++)
+            {
+                File.WriteAllText(Path.Combine(packageRoot, manifest.Files[i].Path), manifest.Files[i].Role);
+            }
+
+            InstallPlan plan = InstallPlanner.Create(manifest, packageRoot, installRoot, startMenuRoot);
+            InstallResult result = InstallService.Execute(plan);
+
+            AssertTrue(result.Ok, "install result ok");
+            AssertEqual(manifest.Files.Length.ToString(), result.CopiedFiles.ToString(), "install copied file count");
+            AssertTrue(File.Exists(Path.Combine(installRoot, "WeChatPlus.Shell.exe")), "install copied shell");
+            AssertTrue(File.Exists(Path.Combine(installRoot, "WeChatPlus.OpenHelper.exe")), "install copied helper");
+            AssertTrue(File.Exists(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "install created shortcut");
+            AssertContains(File.ReadAllText(Path.Combine(startMenuRoot, "WeChat Plus.lnk")), "WeChatPlus.Shell.exe", "install shortcut target");
+            AssertContains(result.SummaryText, "installed", "install summary");
         }
 
         private static void CreatesUninstallPlan()
@@ -443,6 +489,7 @@ namespace WeChatPlus.Tests
             {
                 "WeChatPlus.Shell.exe",
                 "WeChatPlus.Core.dll",
+                "WeChatPlus.Install.exe",
                 "WeChatPlus.Uninstall.exe",
                 "LICENSE",
                 "README.md",

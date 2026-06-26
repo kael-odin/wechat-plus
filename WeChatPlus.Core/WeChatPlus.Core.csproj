@@ -48,6 +48,9 @@
     <Compile Include="Contracts\JsonResultWriter.cs" />
     <Compile Include="Models\AccountRecord.cs" />
     <Compile Include="Models\HelperIntegrityStatus.cs" />
+    <Compile Include="Models\InstallFileCopy.cs" />
+    <Compile Include="Models\InstallPlan.cs" />
+    <Compile Include="Models\InstallResult.cs" />
     <Compile Include="Models\InstallerManifest.cs" />
     <Compile Include="Models\LicenseState.cs" />
     <Compile Include="Models\OpenSourceComponent.cs" />
@@ -69,6 +72,8 @@
     <Compile Include="Services\DiagnosticsLogService.cs" />
     <Compile Include="Services\HelperProcessClient.cs" />
     <Compile Include="Services\HelperIntegrityVerifier.cs" />
+    <Compile Include="Services\InstallPlanner.cs" />
+    <Compile Include="Services\InstallService.cs" />
     <Compile Include="Services\LicenseActivationRequest.cs" />
     <Compile Include="Services\LicenseApiClient.cs" />
     <Compile Include="Services\LicenseFeaturePolicy.cs" />

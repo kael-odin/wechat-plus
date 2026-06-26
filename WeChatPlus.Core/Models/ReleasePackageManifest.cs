@@ -15,6 +15,7 @@ namespace WeChatPlus.Core.Models
                 File("WeChatPlus.Shell.exe", "ClosedSourceShell"),
                 File("WeChatPlus.Core.dll", "NeutralCore"),
                 File("WeChatPlus.OpenHelper.exe", "OpenHelper"),
+                File("WeChatPlus.Install.exe", "Installer"),
                 File("WeChatPlus.Uninstall.exe", "Uninstaller"),
                 File("LICENSE", "OpenSourceLicense"),
                 File("README.md", "RuntimeGuide"),
